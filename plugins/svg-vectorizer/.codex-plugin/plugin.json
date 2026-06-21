@@ -1,0 +1,36 @@
+{
+  "name": "svg-vectorizer",
+  "version": "0.1.0",
+  "description": "Convert raster images into clean or high-fidelity SVGs with validation and optional repair.",
+  "author": {
+    "name": "SVG Vectorizer Contributors"
+  },
+  "homepage": "https://github.com/w2030298-art/svg-vectorizer-codex-plugin",
+  "repository": "https://github.com/w2030298-art/svg-vectorizer-codex-plugin",
+  "license": "MIT",
+  "keywords": [
+    "svg",
+    "vtracer",
+    "vectorization",
+    "image-processing"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SVG Vectorizer",
+    "shortDescription": "Convert images to SVG with validation and repair.",
+    "longDescription": "SVG Vectorizer converts raster images into SVG candidates using vtracer by default, supports pixel-fidelity SVG when explicitly requested, validates outputs with browserless image metrics, and can rerun bounded repair profiles.",
+    "developerName": "SVG Vectorizer Contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Write",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Convert this image to a clean editable SVG.",
+      "Create both vtracer and pixel SVGs, then compare them.",
+      "Validate this SVG trace and suggest repair settings."
+    ],
+    "brandColor": "#F97316"
+  },
+  "mcpServers": "./.mcp.json"
+}

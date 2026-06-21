@@ -1,0 +1,20 @@
+{
+  "name": "svg-tools",
+  "interface": {
+    "displayName": "Svg Tools"
+  },
+  "plugins": [
+    {
+      "name": "svg-vectorizer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/svg-vectorizer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

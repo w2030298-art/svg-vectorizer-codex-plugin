@@ -1,0 +1,5 @@
+numpy>=2.2,<3
+opencv-python-headless>=4.11,<5
+Pillow>=11,<13
+scikit-image>=0.25,<0.26
+vtracer>=0.6.15,<0.7

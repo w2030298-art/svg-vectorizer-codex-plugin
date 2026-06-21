@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "svgVectorizer": {
+      "title": "SVG Vectorizer",
+      "description": "Convert raster images to SVG with vtracer or pixel tracing, validate results, and rerun bounded repair profiles.",
+      "cwd": ".",
+      "command": "node",
+      "args": [
+        "./server/mcp-server.cjs"
+      ]
+    }
+  }
+}

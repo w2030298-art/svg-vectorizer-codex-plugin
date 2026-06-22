@@ -1,0 +1,18 @@
+# .github/release.yml — auto-generated release-notes categories.
+# GitHub Releases is the single version log; notes are derived from merged PRs
+# (cut a release with `gh release create vX.Y.Z --generate-notes`).
+# Labels below should match the PR labels you apply (aligned to the Linear Type group).
+changelog:
+  categories:
+    - title: ✨ Features
+      labels: [Feature]
+    - title: 🛠 Improvements / Refactor
+      labels: [Improvement, Refactor]
+    - title: 🐛 Fixes
+      labels: [Bug]
+    - title: 📝 Docs
+      labels: [Docs]
+    - title: 🔧 Chore / Test
+      labels: [Chore, Test]
+    - title: Other changes
+      labels: ["*"]

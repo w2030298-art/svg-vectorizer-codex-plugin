@@ -1,0 +1,59 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }} / Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11"]
+        node-version: ["22"]
+    env:
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/.npm-cache
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: plugins/svg-vectorizer/server/requirements.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache npm runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            .npm-cache
+            ~/.cache/svg-vectorizer-codex-plugin/node-runtime
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('plugins/svg-vectorizer/server/mcp-server.cjs', 'plugins/svg-vectorizer/server/render_svg_with_resvg.cjs') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r plugins/svg-vectorizer/server/requirements.txt
+
+      - name: Prepare npm cache
+        run: npm cache verify
+
+      - name: Run Python pipeline tests
+        run: python -m unittest tests.test_pipeline -v
+
+      - name: Run MCP smoke tests
+        run: python -m unittest tests.test_mcp_smoke -v

@@ -1,5 +1,7 @@
 # SVG Vectorizer Codex Plugin
 
+[![CI](https://github.com/w2030298-art/svg-vectorizer-codex-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/w2030298-art/svg-vectorizer-codex-plugin/actions/workflows/ci.yml)
+
 Codex plugin for converting raster images to SVG with a three-stage workflow:
 
 1. Convert: vtracer by default, pixel SVG on explicit fidelity requests.

@@ -28,14 +28,38 @@ instead of starting a browser or leaving a background preview server running.
 
 ## Local development
 
+Windows PowerShell:
+
 ```powershell
 py -m venv .venv
+.\.venv\Scripts\python -m pip install --upgrade pip
 .\.venv\Scripts\python -m pip install -r plugins\svg-vectorizer\server\requirements.txt
-.\.venv\Scripts\python -m unittest tests.test_pipeline tests.test_mcp_smoke -v
+.\.venv\Scripts\python -m unittest tests.test_pipeline -v
+.\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
 ```
 
-Validate the plugin manifest:
+POSIX shells:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r plugins/svg-vectorizer/server/requirements.txt
+python -m unittest tests.test_pipeline -v
+python -m unittest tests.test_mcp_smoke -v
+```
+
+Optional: validate the plugin manifest with the `validate_plugin.py` helper from
+Codex's system `plugin-creator` skill. The helper is provided by Codex, not this
+repository, and is not required for the local test commands above. If you have
+that skill installed, point `PLUGIN_VALIDATOR` at your local copy first.
 
 ```powershell
-python C:\Users\22003\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py plugins\svg-vectorizer
+$env:PLUGIN_VALIDATOR = Join-Path $env:USERPROFILE ".codex\skills\.system\plugin-creator\scripts\validate_plugin.py"
+python $env:PLUGIN_VALIDATOR plugins\svg-vectorizer
+```
+
+```sh
+PLUGIN_VALIDATOR="$HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py"
+python "$PLUGIN_VALIDATOR" plugins/svg-vectorizer
 ```

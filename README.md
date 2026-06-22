@@ -8,6 +8,16 @@ Codex plugin for converting raster images to SVG with a three-stage workflow:
 2. Validate: browserless image and SVG structure checks with cv2/skimage.
 3. Repair: optional parameter reruns, not manual SVG path edits.
 
+## Sources of truth
+
+This README is the current-state snapshot and entry point — not a changelog.
+
+- **Overview · how to run · architecture** → this README.
+- **Version / what shipped** → [GitHub Releases](../../releases). _(The marketplace plugin is currently `v0.1.0`; the first GitHub Release is cut at `v0.2.0`.)_
+- **Status · decisions · progress** → [Linear project](https://linear.app/wentaoxu-personal-workplace/project/svg-vectorizer图像转-svg-插件加固功能扩展与双平台适配-668f68c543f2/overview).
+
+> Each fact has one home; this file links to the others — it does not restate version, status, or decisions.
+
 ## Install from this repository
 
 ```powershell

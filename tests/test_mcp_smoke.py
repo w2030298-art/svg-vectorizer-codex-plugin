@@ -5,6 +5,7 @@ import shutil
 import site
 import subprocess
 import tempfile
+import textwrap
 import threading
 import unittest
 from pathlib import Path
@@ -116,6 +117,53 @@ def prepare_mcp_python_runtime(home: Path, env: dict[str, str]) -> None:
     env["PYTHONPATH"] = os.pathsep.join(site_paths)
 
 
+def run_mcp_server_harness(
+    spawn_sync_source: str,
+    action_source: str,
+    env: dict[str, str] | None = None,
+    platform: str | None = None,
+) -> dict:
+    with tempfile.TemporaryDirectory() as tmp:
+        script = f"""
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const vm = require("vm");
+const serverPath = {json.dumps(str(SERVER))};
+const fakeHome = {json.dumps(tmp)};
+const calls = [];
+const fakeChildProcess = {{
+  spawnSync: {spawn_sync_source}
+}};
+const sandbox = {{
+  Buffer,
+  clearTimeout,
+  console,
+  setTimeout,
+  __dirname: path.dirname(serverPath),
+  process: {{
+    ...process,
+    env: {{ ...process.env, ...{json.dumps(env or {})} }},
+    platform: {json.dumps(platform) if platform else "process.platform"},
+    stdout: {{ write() {{}} }}
+  }},
+  require(name) {{
+    if (name === "child_process") return fakeChildProcess;
+    if (name === "os") return {{ ...os, homedir: () => fakeHome }};
+    if (name === "readline") return {{ createInterface: () => ({{ on() {{}} }}) }};
+    return require(name);
+  }}
+}};
+vm.runInNewContext(fs.readFileSync(serverPath, "utf-8"), sandbox, {{ filename: serverPath }});
+const payload = (() => {{
+{textwrap.indent(action_source, "  ")}
+}})();
+console.log(JSON.stringify({{ payload, calls }}));
+"""
+        result = subprocess.run([NODE, "-e", script], check=True, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+
 class McpSmokeTests(unittest.TestCase):
     def start_server(self, env: dict[str, str] | None = None) -> JsonRpcServer:
         server = JsonRpcServer(env)
@@ -208,6 +256,116 @@ class McpSmokeTests(unittest.TestCase):
         self.assertEqual(parse_error["error"]["code"], -32603)
         self.assertTrue(parse_error["error"]["message"])
 
+    def test_tools_call_rejects_unsupported_python_with_actionable_error(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  if (args.includes("--version")) {
+    return { status: 0, stdout: "Python 3.14.0\\n", stderr: "" };
+  }
+  return { status: 1, stdout: "", stderr: "Unknown compiler(s): [['icl'], ['cl']]\\n" };
+}
+""",
+            """
+try {
+  sandbox.ensurePythonRuntime();
+  return { ok: true };
+} catch (error) {
+  return { ok: false, message: error.message };
+}
+""",
+        )
+
+        self.assertFalse(result["payload"]["ok"])
+        message = result["payload"]["message"]
+        self.assertIn("Unsupported Python 3.14", message)
+        self.assertIn("Python 3.10 through 3.12", message)
+        self.assertIn("scikit-image", message)
+        self.assertIn("SVG_VECTORIZER_PYTHON", message)
+        self.assertNotIn("Unknown compiler", message)
+
+    def test_python_bootstrap_uses_configured_interpreter_override(self):
+        override = r"C:\Codex\python-3.12.13\python.exe"
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  if (args.includes("--version")) {
+    return { status: 0, stdout: "Python 3.12.13\\n", stderr: "" };
+  }
+  return { status: 0, stdout: "", stderr: "" };
+}
+""",
+            """
+try {
+  const python = sandbox.ensurePythonRuntime();
+  return { ok: true, python };
+} catch (error) {
+  return { ok: false, message: error.message };
+}
+""",
+            env={"SVG_VECTORIZER_PYTHON": override},
+        )
+
+        self.assertTrue(result["payload"]["ok"], result["payload"])
+        self.assertEqual(result["calls"][0]["command"], override)
+
+    def test_validate_bootstrap_installs_resvg_with_optional_dependencies(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  return { status: 1, stdout: "", stderr: "fake npm renderer unavailable\\n" };
+}
+""",
+            """
+return { renderer: sandbox.ensureNodeRenderer() };
+""",
+        )
+
+        self.assertFalse(result["payload"]["renderer"]["ok"])
+        npm_args = " ".join(result["calls"][0]["args"])
+        self.assertIn("@resvg/resvg-js@2.6.2", npm_args)
+        self.assertIn("--include=optional", npm_args)
+
+    def test_validate_bootstrap_invokes_windows_npm_cmd_through_shell(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  return { status: 1, stdout: "", stderr: "fake npm renderer unavailable\\n" };
+}
+""",
+            """
+return { renderer: sandbox.ensureNodeRenderer() };
+""",
+            env={"ComSpec": r"C:\Windows\System32\cmd.exe"},
+            platform="win32",
+        )
+
+        call = result["calls"][0]
+        self.assertEqual(call["command"], r"C:\Windows\System32\cmd.exe")
+        self.assertEqual(call["args"][:3], ["/d", "/s", "/c"])
+        self.assertIn("npm.cmd install @resvg/resvg-js@2.6.2 --include=optional", call["args"][3])
+
+    def test_validate_bootstrap_reports_npm_spawn_error(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  return { status: null, stdout: "", stderr: "", error: { message: "spawn npm.cmd ENOENT" } };
+}
+""",
+            """
+return { renderer: sandbox.ensureNodeRenderer() };
+""",
+        )
+
+        error = result["payload"]["renderer"]["error"]
+        self.assertIn("npm install @resvg/resvg-js@2.6.2 --include=optional failed", error)
+        self.assertIn("spawn npm.cmd ENOENT", error)
+
     def test_validate_tool_degrades_when_renderer_bootstrap_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -266,10 +424,7 @@ class McpSmokeTests(unittest.TestCase):
         self.assertEqual(report["status"], "degraded")
         self.assertEqual(report["renderer"], "prepared-png-proxy")
         self.assertIsNone(report["rendered_png"])
-        self.assertTrue(
-            "fake npm renderer unavailable" in report["renderer_warning"]
-            or "npm install @resvg/resvg-js failed" in report["renderer_warning"]
-        )
+        self.assertIn("npm install @resvg/resvg-js@2.6.2 --include=optional failed", report["renderer_warning"])
 
 
 if __name__ == "__main__":

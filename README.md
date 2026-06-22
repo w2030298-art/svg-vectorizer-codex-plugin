@@ -26,6 +26,43 @@ On first use, the MCP server creates runtime caches under
 If either runtime setup fails, the tool returns a degraded validation report
 instead of starting a browser or leaving a background preview server running.
 
+## Troubleshooting fresh environments
+
+### Supported Python versions
+
+The bootstrapper supports Python 3.10 through 3.12 for creating the plugin
+venv. Python versions newer than that, such as 3.14, can make packages such as
+scikit-image fall back to native builds on fresh Windows machines without C/C++
+Build Tools.
+
+Install Python 3.10, 3.11, or 3.12, or point the plugin at a known supported
+interpreter:
+
+```powershell
+$env:SVG_VECTORIZER_PYTHON = "C:\path\to\python-3.12.13\python.exe"
+```
+
+For Codex bundled Python, set `SVG_VECTORIZER_PYTHON` to the bundled Python
+3.12.13 `python.exe`, then start a new Codex thread so the MCP server inherits
+the environment.
+
+### Fresh empty directories
+
+The installed plugin does not require the current working directory to be a Git
+checkout. It creates Python and Node runtime caches under
+`~/.cache/svg-vectorizer-codex-plugin` and writes artifacts to the `output_dir`
+you pass to the tool.
+
+### Renderer optional dependencies
+
+The SVG renderer uses `@resvg/resvg-js`, whose native platform package is an
+optional npm dependency. Do not omit optional dependencies when reinstalling the
+renderer runtime manually:
+
+```powershell
+npm install @resvg/resvg-js@2.6.2 --include=optional --omit=dev --no-audit --no-fund
+```
+
 ## Local development
 
 Windows PowerShell:

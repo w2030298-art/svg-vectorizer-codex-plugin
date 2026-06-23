@@ -62,6 +62,16 @@ the cache venv, and installs
 `plugins/svg-vectorizer/server/requirements.txt`. Set
 `SVG_VECTORIZER_PYTHON` to force a supported interpreter.
 
+Existing cache venvs are health checked before reuse by importing the core
+modules: `cv2`, `numpy`, `PIL`, `skimage`, and `vtracer`. If any are missing,
+the server tries to repair the venv with `pip install -r requirements.txt`; if
+repair or rebuild fails, it removes the bad venv so later runs do not reuse a
+partial environment. Python discovery tries an explicit 3.12 first, then checks
+Codex's bundled runtime at
+`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`
+before falling back to lower supported system versions and finally failing on an
+unsupported broad `python` or `py -3` candidate.
+
 Validation also needs `@resvg/resvg-js`. The MCP server installs it into the
 Node runtime cache with optional native dependencies included. If renderer setup
 fails, validation returns `status: "degraded"` and uses the prepared PNG as a

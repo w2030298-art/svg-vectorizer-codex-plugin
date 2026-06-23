@@ -22,6 +22,22 @@ const PYTHON_OVERRIDE_ENV = "SVG_VECTORIZER_PYTHON";
 const SUPPORTED_PYTHON_MIN = { major: 3, minor: 10 };
 const SUPPORTED_PYTHON_MAX = { major: 3, minor: 12 };
 const SUPPORTED_PYTHON_LABEL = "Python 3.10 through 3.12";
+const CORE_PYTHON_MODULES = ["cv2", "numpy", "PIL", "skimage", "vtracer"];
+const DEPENDENCY_PROBE_SCRIPT = `
+import importlib
+import json
+
+# import cv2, numpy, PIL, skimage, vtracer
+modules = ${JSON.stringify(CORE_PYTHON_MODULES)}
+missing = []
+for module in modules:
+    try:
+        importlib.import_module(module)
+    except Exception:
+        missing.append(module)
+print(json.dumps({"missing": missing}))
+raise SystemExit(1 if missing else 0)
+`;
 
 const tools = [
   {
@@ -112,12 +128,28 @@ function candidateLabel(candidate) {
   return [candidate.command, ...candidate.argsPrefix].join(" ");
 }
 
+function compactOutput(result) {
+  return String(
+    (result && (result.stderr || result.stdout || (result.error && result.error.message))) || ""
+  ).trim();
+}
+
+function repairSuggestion() {
+  return (
+    `Set ${PYTHON_OVERRIDE_ENV} to a ${SUPPORTED_PYTHON_LABEL} executable, ` +
+    `or delete ${VENV_DIR} and retry so svg-vectorizer can rebuild the cache.`
+  );
+}
+
 function unsupportedPythonError(candidate, version) {
   return new Error(
     `Unsupported Python ${pythonVersionLabel(version)} selected for svg-vectorizer via ${candidateLabel(candidate)}. ` +
       `Supported versions are ${SUPPORTED_PYTHON_LABEL}. ` +
+      `Runtime venv: ${VENV_DIR}. ` +
+      `Required modules: ${CORE_PYTHON_MODULES.join(", ")}. ` +
       "scikit-image may not provide wheels for this Python version in a fresh Windows environment, so pip can fall back to a native build that requires C/C++ Build Tools. " +
       `Install Python 3.10, 3.11, or 3.12, or set ${PYTHON_OVERRIDE_ENV} to a supported interpreter. ` +
+      `${repairSuggestion()} ` +
       `Codex users can point ${PYTHON_OVERRIDE_ENV} at the bundled Python 3.12.13 python.exe.`
   );
 }
@@ -135,9 +167,11 @@ function inspectPythonCandidate(candidate) {
 }
 
 function pythonCandidates() {
+  const bundled = codexBundledPythonCandidates();
   if (IS_WIN) {
     return [
       { command: "py", argsPrefix: ["-3.12"] },
+      ...bundled,
       { command: "py", argsPrefix: ["-3.11"] },
       { command: "py", argsPrefix: ["-3.10"] },
       { command: "py", argsPrefix: ["-3"] },
@@ -146,11 +180,33 @@ function pythonCandidates() {
   }
   return [
     { command: "python3.12", argsPrefix: [] },
+    ...bundled,
     { command: "python3.11", argsPrefix: [] },
     { command: "python3.10", argsPrefix: [] },
     { command: "python3", argsPrefix: [] },
     { command: "python", argsPrefix: [] }
   ];
+}
+
+function codexBundledPythonCandidates() {
+  const runtimeDir = path.join(
+    os.homedir(),
+    ".cache",
+    "codex-runtimes",
+    "codex-primary-runtime",
+    "dependencies",
+    "python"
+  );
+  const names = IS_WIN ? ["python.exe"] : ["python", "python.exe"];
+  const seen = new Set();
+  const candidates = [];
+  for (const name of names) {
+    const command = path.join(runtimeDir, name);
+    if (seen.has(command) || !fs.existsSync(command)) continue;
+    seen.add(command);
+    candidates.push({ command, argsPrefix: [] });
+  }
+  return candidates;
 }
 
 function findPython() {
@@ -164,32 +220,158 @@ function findPython() {
       );
     }
     if (!selected.supported) throw unsupportedPythonError(selected.candidate, selected.version);
-    return selected.candidate;
+    return { ...selected.candidate, version: selected.version };
   }
 
   const unsupported = [];
   for (const candidate of pythonCandidates()) {
     const selected = inspectPythonCandidate(candidate);
     if (!selected.available) continue;
-    if (selected.supported) return selected.candidate;
+    if (selected.supported) return { ...selected.candidate, version: selected.version };
     unsupported.push(selected);
   }
 
   if (unsupported.length > 0) {
     throw unsupportedPythonError(unsupported[0].candidate, unsupported[0].version);
   }
-  throw new Error(`No supported Python runtime found. Install ${SUPPORTED_PYTHON_LABEL}, or set ${PYTHON_OVERRIDE_ENV} to a supported interpreter.`);
+  throw new Error(
+    `No supported Python runtime found for svg-vectorizer. Supported versions are ${SUPPORTED_PYTHON_LABEL}. ` +
+      `Runtime venv: ${VENV_DIR}. Required modules: ${CORE_PYTHON_MODULES.join(", ")}. ` +
+      repairSuggestion()
+  );
+}
+
+function parseMissingModules(result) {
+  const stdout = String((result && result.stdout) || "").trim();
+  for (const line of stdout.split(/\r?\n/).reverse()) {
+    if (!line.trim()) continue;
+    try {
+      const payload = JSON.parse(line);
+      if (Array.isArray(payload.missing)) return payload.missing;
+    } catch (_error) {
+      // Keep looking for the JSON probe payload.
+    }
+  }
+
+  const missing = new Set();
+  const output = `${(result && result.stderr) || ""}\n${(result && result.stdout) || ""}`;
+  const pattern = /No module named ['"]([^'"]+)['"]/g;
+  let match;
+  while ((match = pattern.exec(output)) !== null) {
+    missing.add(match[1]);
+  }
+  return [...missing];
+}
+
+function inspectVenvDependencies() {
+  const result = childProcess.spawnSync(
+    VENV_PYTHON,
+    ["-c", DEPENDENCY_PROBE_SCRIPT],
+    { encoding: "utf-8", timeout: 30000 }
+  );
+  const missingModules = parseMissingModules(result);
+  return {
+    ok: result.status === 0 && missingModules.length === 0,
+    missingModules,
+    output: compactOutput(result)
+  };
+}
+
+function runtimeSetupError(headline, details = {}) {
+  const selected = details.selectedPython
+    ? `${candidateLabel(details.selectedPython)}${details.selectedPython.version ? ` (Python ${pythonVersionLabel(details.selectedPython.version)})` : ""}`
+    : "not selected";
+  const missing = details.missingModules && details.missingModules.length > 0
+    ? details.missingModules.join(", ")
+    : CORE_PYTHON_MODULES.join(", ");
+  const parts = [
+    headline,
+    `Runtime venv: ${VENV_DIR}.`,
+    `Selected Python: ${selected}.`,
+    `Missing core modules: ${missing}.`
+  ];
+  if (details.output) parts.push(`Diagnostic output: ${details.output}`);
+  parts.push(`Fix: ${repairSuggestion()}`);
+  return new Error(parts.join(" "));
+}
+
+function installRequirements() {
+  const result = childProcess.spawnSync(
+    VENV_PYTHON,
+    ["-m", "pip", "install", "-r", REQUIREMENTS],
+    { encoding: "utf-8" }
+  );
+  return { ok: result.status === 0, output: compactOutput(result), result };
+}
+
+function removePythonRuntime() {
+  fs.rmSync(VENV_DIR, { recursive: true, force: true });
+}
+
+function createPythonRuntime(base, previousHealth = {}) {
+  removePythonRuntime();
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+  let result = childProcess.spawnSync(
+    base.command,
+    [...base.argsPrefix, "-m", "venv", VENV_DIR],
+    { encoding: "utf-8" }
+  );
+  if (result.status !== 0) {
+    removePythonRuntime();
+    throw runtimeSetupError("Failed to create svg-vectorizer Python runtime.", {
+      selectedPython: base,
+      missingModules: previousHealth.missingModules,
+      output: compactOutput(result)
+    });
+  }
+
+  const install = installRequirements();
+  if (!install.ok) {
+    removePythonRuntime();
+    throw runtimeSetupError("Failed to install svg-vectorizer Python requirements.", {
+      selectedPython: base,
+      missingModules: previousHealth.missingModules,
+      output: install.output
+    });
+  }
+
+  const health = inspectVenvDependencies();
+  if (!health.ok) {
+    removePythonRuntime();
+    throw runtimeSetupError("svg-vectorizer Python runtime is missing dependencies after install.", {
+      selectedPython: base,
+      missingModules: health.missingModules,
+      output: health.output
+    });
+  }
+
+  return VENV_PYTHON;
 }
 
 function ensurePythonRuntime() {
-  if (fs.existsSync(VENV_PYTHON)) return VENV_PYTHON;
   fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+  if (fs.existsSync(VENV_PYTHON)) {
+    let health = inspectVenvDependencies();
+    if (health.ok) return VENV_PYTHON;
+
+    const repair = installRequirements();
+    if (repair.ok) {
+      health = inspectVenvDependencies();
+      if (health.ok) return VENV_PYTHON;
+    }
+
+    removePythonRuntime();
+    const base = findPython();
+    return createPythonRuntime(base, {
+      missingModules: health.missingModules,
+      output: repair.output || health.output
+    });
+  }
+
   const base = findPython();
-  let result = childProcess.spawnSync(base.command, [...base.argsPrefix, "-m", "venv", VENV_DIR], { encoding: "utf-8" });
-  if (result.status !== 0) throw new Error(`Failed to create Python venv with ${candidateLabel(base)}: ${result.stderr || result.stdout}`);
-  result = childProcess.spawnSync(VENV_PYTHON, ["-m", "pip", "install", "-r", REQUIREMENTS], { encoding: "utf-8" });
-  if (result.status !== 0) throw new Error(`Failed to install Python requirements with ${candidateLabel(base)}: ${result.stderr || result.stdout}`);
-  return VENV_PYTHON;
+  return createPythonRuntime(base);
 }
 
 function ensureNodeRenderer() {

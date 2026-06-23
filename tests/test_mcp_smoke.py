@@ -281,8 +281,12 @@ try {
         message = result["payload"]["message"]
         self.assertIn("Unsupported Python 3.14", message)
         self.assertIn("Python 3.10 through 3.12", message)
+        self.assertIn(".cache", message)
+        self.assertIn("svg-vectorizer-codex-plugin", message)
+        self.assertIn("cv2", message)
         self.assertIn("scikit-image", message)
         self.assertIn("SVG_VECTORIZER_PYTHON", message)
+        self.assertIn("delete", message)
         self.assertNotIn("Unknown compiler", message)
 
     def test_python_bootstrap_uses_configured_interpreter_override(self):
@@ -310,6 +314,151 @@ try {
 
         self.assertTrue(result["payload"]["ok"], result["payload"])
         self.assertEqual(result["calls"][0]["command"], override)
+
+    def test_python_bootstrap_repairs_existing_venv_with_missing_core_dependency(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  const commandText = String(command).replace(/\\\\/g, "/");
+  const isVenvPython = commandText.endsWith("/.cache/svg-vectorizer-codex-plugin/venv/Scripts/python.exe");
+  if (isVenvPython && args.includes("-c")) {
+    const probeNumber = calls.filter((call) => call.args.includes("-c")).length;
+    if (probeNumber === 1) {
+      return { status: 1, stdout: "", stderr: "ModuleNotFoundError: No module named 'cv2'\\n" };
+    }
+    return { status: 0, stdout: "", stderr: "" };
+  }
+  if (isVenvPython && args.join(" ").includes("-m pip install")) {
+    return { status: 0, stdout: "installed\\n", stderr: "" };
+  }
+  return { status: 1, stdout: "", stderr: `unexpected ${command} ${args.join(" ")}` };
+}
+""",
+            """
+const venvPython = path.join(fakeHome, ".cache", "svg-vectorizer-codex-plugin", "venv", "Scripts", "python.exe");
+fs.mkdirSync(path.dirname(venvPython), { recursive: true });
+fs.writeFileSync(venvPython, "", "utf-8");
+try {
+  const python = sandbox.ensurePythonRuntime();
+  return {
+    ok: true,
+    python,
+    venvExists: fs.existsSync(path.dirname(path.dirname(venvPython)))
+  };
+} catch (error) {
+  return { ok: false, message: error.message };
+}
+""",
+            platform="win32",
+        )
+
+        self.assertTrue(result["payload"]["ok"], result["payload"])
+        joined_calls = [" ".join([call["command"], *call["args"]]) for call in result["calls"]]
+        self.assertTrue(any("import cv2" in call for call in joined_calls))
+        self.assertTrue(any("-m pip install -r" in call for call in joined_calls))
+        self.assertEqual(len([call for call in joined_calls if "import cv2" in call]), 2)
+
+    def test_python_bootstrap_cleans_bad_venv_after_pip_install_failure(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  const commandText = String(command).replace(/\\\\/g, "/");
+  const isVenvPython = commandText.endsWith("/.cache/svg-vectorizer-codex-plugin/venv/Scripts/python.exe");
+  if (isVenvPython && args.includes("-c")) {
+    return { status: 1, stdout: "", stderr: "ModuleNotFoundError: No module named 'cv2'\\n" };
+  }
+  if (isVenvPython && args.join(" ").includes("-m pip install")) {
+    return { status: 1, stdout: "", stderr: "Unknown compiler(s): [['cl']]\\n" };
+  }
+  if (args.includes("--version")) {
+    return { status: 0, stdout: "Python 3.12.13\\n", stderr: "" };
+  }
+  if (args.join(" ").includes("-m venv")) {
+    const venvPython = path.join(fakeHome, ".cache", "svg-vectorizer-codex-plugin", "venv", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venvPython), { recursive: true });
+    fs.writeFileSync(venvPython, "", "utf-8");
+    return { status: 0, stdout: "", stderr: "" };
+  }
+  return { status: 1, stdout: "", stderr: `unexpected ${command} ${args.join(" ")}` };
+}
+""",
+            """
+const venvPython = path.join(fakeHome, ".cache", "svg-vectorizer-codex-plugin", "venv", "Scripts", "python.exe");
+fs.mkdirSync(path.dirname(venvPython), { recursive: true });
+fs.writeFileSync(venvPython, "", "utf-8");
+try {
+  sandbox.ensurePythonRuntime();
+  return { ok: true, venvExists: fs.existsSync(path.dirname(path.dirname(venvPython))) };
+} catch (error) {
+  return {
+    ok: false,
+    message: error.message,
+    venvExists: fs.existsSync(path.dirname(path.dirname(venvPython)))
+  };
+}
+""",
+            platform="win32",
+        )
+
+        self.assertFalse(result["payload"]["ok"])
+        self.assertFalse(result["payload"]["venvExists"])
+        message = result["payload"]["message"]
+        self.assertIn("venv", message)
+        self.assertIn("cv2", message)
+        self.assertIn("Python 3.12.13", message)
+        self.assertIn("SVG_VECTORIZER_PYTHON", message)
+        self.assertNotEqual(message.strip(), "ModuleNotFoundError: No module named 'cv2'")
+
+    def test_python_bootstrap_auto_discovers_codex_bundled_python(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args });
+  const commandText = String(command).replace(/\\\\/g, "/");
+  const isBundledPython = commandText.endsWith("/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe");
+  const isVenvPython = commandText.endsWith("/.cache/svg-vectorizer-codex-plugin/venv/Scripts/python.exe");
+  if (args.includes("--version")) {
+    if (isBundledPython) return { status: 0, stdout: "Python 3.12.13\\n", stderr: "" };
+    if (String(command) === "py" && ["-3.12", "-3.11", "-3.10"].some((flag) => args.includes(flag))) {
+      return { status: 1, stdout: "", stderr: "No suitable Python runtime found\\n" };
+    }
+    return { status: 0, stdout: "Python 3.14.0\\n", stderr: "" };
+  }
+  if (isBundledPython && args.join(" ").includes("-m venv")) {
+    const venvPython = path.join(fakeHome, ".cache", "svg-vectorizer-codex-plugin", "venv", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venvPython), { recursive: true });
+    fs.writeFileSync(venvPython, "", "utf-8");
+    return { status: 0, stdout: "", stderr: "" };
+  }
+  if (isVenvPython && args.join(" ").includes("-m pip install")) {
+    return { status: 0, stdout: "installed\\n", stderr: "" };
+  }
+  if (isVenvPython && args.includes("-c")) {
+    return { status: 0, stdout: "", stderr: "" };
+  }
+  return { status: 1, stdout: "", stderr: `unexpected ${command} ${args.join(" ")}` };
+}
+""",
+            """
+const bundled = path.join(fakeHome, ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "python", "python.exe");
+fs.mkdirSync(path.dirname(bundled), { recursive: true });
+fs.writeFileSync(bundled, "", "utf-8");
+try {
+  const python = sandbox.ensurePythonRuntime();
+  return { ok: true, python };
+} catch (error) {
+  return { ok: false, message: error.message };
+}
+""",
+            platform="win32",
+        )
+
+        self.assertTrue(result["payload"]["ok"], result["payload"])
+        venv_calls = [call for call in result["calls"] if "-m" in call["args"] and "venv" in call["args"]]
+        self.assertEqual(len(venv_calls), 1)
+        self.assertIn("codex-runtimes", venv_calls[0]["command"].replace("\\", "/"))
 
     def test_validate_bootstrap_installs_resvg_with_optional_dependencies(self):
         result = run_mcp_server_harness(

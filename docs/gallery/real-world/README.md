@@ -1,17 +1,18 @@
 # Real-World SVG Pipeline Gallery
 
 This gallery records four small real-image cases run through `run_svg_pipeline`
-with `mode: "both"`. Each case includes the bounded source image, vtracer and
-pixel SVG candidates, rendered diff contact sheets, assessment JSON, and a
-Chrome-open screenshot review.
+with `mode: "both"`, plus one WEN-426 before/after case for baked RGB
+checkerboard transparency. Each case includes the bounded source image, SVG
+candidates, rendered diff contact sheets, assessment JSON, and a Chrome-open
+screenshot review.
 
 Source metadata is in [`source_metadata.json`](source_metadata.json). A compact
 machine-readable summary is in [`gallery_manifest.json`](gallery_manifest.json).
 
 ## Browser Review
 
-All generated SVGs were opened from `file://` URLs in Google Chrome for Testing
-150.0.7871.24 on 2026-06-23. The browser screenshots are in
+All generated SVGs were opened from `file://` URLs in Chrome on 2026-06-23.
+The WEN-426 screenshots were captured with Google Chrome 149.0.7827.116. The browser screenshots are in
 [`browser-review/`](browser-review/), and the combined review sheet is:
 
 ![Chrome browser review contact sheet](browser-review/browser_review_contact_sheet.png)
@@ -28,6 +29,9 @@ Manual visual conclusions are recorded in
   silhouette and color bands.
 - Flower photo: pixel preserves the bounded raster source exactly; vtracer is a
   stylized posterized approximation rather than photo-fidelity output.
+- Checkerboard RGB icon: default `auto` preserves baked checkerboard fills, while
+  `mask_mode: "checkerboard"` removes the 12 px checkerboard background before
+  vtracer.
 
 ## Cases
 
@@ -82,3 +86,21 @@ Mask mode: `none`; quality profile: `compact`.
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | vtracer | warn | 1.0000 | 0.7469 | 10.95 | 11 | [`assessment.json`](flower-photo/vtracer/validation/flower_photo_vtracer_assessment.json) |
 | pixel | pass | 1.0000 | 1.0000 | 0.00 | 4342 | [`assessment.json`](flower-photo/pixel/validation/flower_photo_pixel_assessment.json) |
+
+### Checkerboard RGB Icon
+
+Before/after WEN-426 case for an RGB input with no alpha where fake transparency
+is baked as a `#ffffff/#c4c4c4` checkerboard. Default `auto` remains `flood`; the
+new strategy is explicit `mask_mode: "checkerboard"`.
+
+| Source | auto vtracer SVG | auto diff | checkerboard vtracer SVG | checkerboard diff |
+| --- | --- | --- | --- | --- |
+| ![Checkerboard RGB source](sources/checkerboard_rgb_icon.png) | ![Auto vtracer](checkerboard-rgb-icon/auto/checkerboard_rgb_icon_auto_vtracer.svg) | ![Auto vtracer diff](checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_diff.png) | ![Checkerboard vtracer](checkerboard-rgb-icon/checkerboard/checkerboard_rgb_icon_checkerboard_vtracer.svg) | ![Checkerboard vtracer diff](checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_diff.png) |
+
+| Candidate | Effective mask | checkerboard detected | alpha_iou | rgba_ssim | paths | fills | foreground pixels | assessment |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| auto before | `flood` | no | 1.0000 | 0.9605 | 54 | 8 | 9216 | [`assessment.json`](checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_assessment.json) |
+| checkerboard after | `checkerboard` | yes, 12 px | 0.9467 | 0.9426 | 2 | 2 | 2009 | [`assessment.json`](checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_assessment.json) |
+
+Browser screenshot pixel check: the auto SVG screenshot has 3366 `#c4c4c4` gray
+checker pixels; the checkerboard SVG screenshot has 0.

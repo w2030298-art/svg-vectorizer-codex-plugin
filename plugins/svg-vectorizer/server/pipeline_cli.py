@@ -43,7 +43,7 @@ def _legacy_main(argv: list[str]) -> int:
 
 def _add_conversion_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--mode", choices=("vtracer", "pixel"), default="vtracer")
-    parser.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "none"), default="auto")
+    parser.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "checkerboard", "none"), default="auto")
     parser.add_argument("--quality-profile", choices=("compact", "balanced", "fidelity"), default="balanced")
 
 
@@ -97,7 +97,7 @@ def _build_subcommand_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("input_path")
     pipeline.add_argument("output_dir")
     pipeline.add_argument("--mode", choices=("vtracer", "pixel", "both"), default="vtracer")
-    pipeline.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "none"), default="auto")
+    pipeline.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "checkerboard", "none"), default="auto")
     pipeline.add_argument("--quality-profile", choices=("compact", "balanced", "fidelity"), default="balanced")
     pipeline.add_argument("--repair", action="store_true")
     pipeline.set_defaults(
@@ -115,7 +115,7 @@ def _build_subcommand_parser() -> argparse.ArgumentParser:
     batch.add_argument("input_path")
     batch.add_argument("output_dir")
     batch.add_argument("--mode", choices=("vtracer", "pixel", "both"), default="vtracer")
-    batch.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "none"), default="auto")
+    batch.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "checkerboard", "none"), default="auto")
     batch.add_argument("--quality-profile", choices=("compact", "balanced", "fidelity"), default="balanced")
     batch.add_argument("--repair", action="store_true")
     batch.add_argument("--max-workers", type=int, default=2)

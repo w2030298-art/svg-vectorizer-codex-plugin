@@ -1,6 +1,6 @@
 {
   "review_date": "2026-06-23",
-  "browser": "Google Chrome for Testing 150.0.7871.24",
+  "browser": "Google Chrome / Chrome for Testing; WEN-426 screenshots captured with Google Chrome 149.0.7827.116",
   "method": "Opened each generated SVG with headless Chrome using file:// URLs and saved screenshots.",
   "contact_sheet": "browser-review/browser_review_contact_sheet.png",
   "screenshots": [
@@ -11,12 +11,15 @@
     "browser-review/firefox_warm_gradient_vtracer_chrome.png",
     "browser-review/firefox_warm_gradient_pixel_chrome.png",
     "browser-review/flower_photo_vtracer_chrome.png",
-    "browser-review/flower_photo_pixel_chrome.png"
+    "browser-review/flower_photo_pixel_chrome.png",
+    "browser-review/checkerboard_rgb_icon_auto_vtracer_chrome.png",
+    "browser-review/checkerboard_rgb_icon_checkerboard_vtracer_chrome.png"
   ],
   "conclusions": {
     "wikipedia-logo": "Pixel candidate preserves glyph/detail fidelity. Vtracer is recognizable but loses fine globe marks and should be treated as a compact approximation.",
     "oojs-edit-icon": "Both candidates open correctly. Pixel preserves the thin highlight/outline; vtracer simplifies to a solid editable pencil silhouette.",
     "firefox-warm-gradient": "Both candidates open correctly after warm-icon masking. Pixel preserves logo gradients more closely; vtracer keeps the main silhouette and color bands with some contour simplification.",
-    "flower-photo": "Pixel candidate preserves the raster photo exactly at the bounded source size. Vtracer is a stylized low-detail posterization and is not photo-fidelity output."
+    "flower-photo": "Pixel candidate preserves the raster photo exactly at the bounded source size. Vtracer is a stylized low-detail posterization and is not photo-fidelity output.",
+    "checkerboard-rgb-icon": "Default auto/flood preserves baked checkerboard fills (#FFFFFF/#C4C4C4) in the SVG, while mask_mode=checkerboard detects 12 px tiles and removes those fills; browser screenshot gray-block pixels drop from 3366 to 0."
   }
 }

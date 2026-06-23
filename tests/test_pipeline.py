@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 from PIL import Image, ImageDraw
 
 import sys
@@ -17,6 +18,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 RENDER_HELPER = PLUGIN_ROOT / "server" / "render_svg_with_resvg.cjs"
 
 from svg_vectorizer_pipeline import (
+    _detect_baked_checkerboard,
     _render_svg,
     convert_image_to_svg,
     repair_svg_trace,
@@ -80,6 +82,18 @@ def make_icon(path: Path) -> None:
     draw.ellipse((34, 8, 62, 36), fill=(255, 150, 30), outline=(8, 2, 0), width=4)
     draw.rounded_rectangle((25, 35, 72, 85), radius=10, fill=(255, 150, 30), outline=(8, 2, 0), width=4)
     draw.rounded_rectangle((12, 38, 30, 60), radius=4, fill=(255, 150, 30), outline=(8, 2, 0), width=4)
+    image.save(path)
+
+
+def make_baked_checkerboard_icon(path: Path) -> None:
+    image = Image.new("RGB", (64, 64), (255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    for y in range(0, 64, 8):
+        for x in range(0, 64, 8):
+            fill = (255, 255, 255) if ((x // 8) + (y // 8)) % 2 == 0 else (204, 204, 204)
+            draw.rectangle((x, y, x + 7, y + 7), fill=fill)
+    draw.ellipse((18, 14, 46, 42), fill=(35, 115, 220))
+    draw.rectangle((25, 36, 39, 52), fill=(35, 115, 220))
     image.save(path)
 
 
@@ -473,6 +487,61 @@ class PipelineTests(unittest.TestCase):
             bad_manifest.write_text("{}\n", encoding="utf-8")
             with self.assertRaises(KeyError):
                 repair_svg_trace(bad_manifest, root / "repair")
+
+    def test_checkerboard_mask_detects_and_removes_baked_rgb_transparency(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "checkerboard_icon.png"
+            make_baked_checkerboard_icon(source)
+
+            result = convert_image_to_svg(
+                input_path=source,
+                output_dir=root / "checkerboard",
+                mode="pixel",
+                mask_mode="checkerboard",
+                quality_profile="fidelity",
+            )
+
+            prepared = Image.open(result["prepared_png"]).convert("RGBA")
+            prepared_pixels = prepared.load()
+            self.assertEqual(result["mask_mode"], "checkerboard")
+            self.assertTrue(result["checkerboard_detected"])
+            self.assertEqual(result["checkerboard_tile_size"], 8)
+            self.assertEqual(prepared_pixels[0, 0][3], 0)
+            self.assertEqual(prepared_pixels[9, 0][3], 0)
+            self.assertGreater(prepared_pixels[32, 28][3], 0)
+            self.assertLess(result["foreground_pixels"], 1200)
+            self.assertTrue(Path(result["svg"]).exists())
+
+    def test_auto_mask_does_not_upgrade_rgb_checkerboard_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "checkerboard_icon.png"
+            make_baked_checkerboard_icon(source)
+
+            default_result = convert_image_to_svg(
+                input_path=source,
+                output_dir=root / "auto",
+                mode="pixel",
+                mask_mode="auto",
+                quality_profile="fidelity",
+            )
+            checkerboard_result = convert_image_to_svg(
+                input_path=source,
+                output_dir=root / "checkerboard",
+                mode="pixel",
+                mask_mode="checkerboard",
+                quality_profile="fidelity",
+            )
+
+            self.assertEqual(default_result["mask_mode"], "flood")
+            self.assertFalse(default_result["checkerboard_detected"])
+            self.assertTrue(checkerboard_result["checkerboard_detected"])
+
+    def test_checkerboard_detection_rejects_flat_rgb_background(self):
+        rgb = np.asarray(Image.new("RGB", (32, 32), (240, 240, 240)), dtype=np.uint8)
+
+        self.assertIsNone(_detect_baked_checkerboard(rgb))
 
     def test_repair_uses_parameter_reruns_only(self):
         with tempfile.TemporaryDirectory() as tmp:

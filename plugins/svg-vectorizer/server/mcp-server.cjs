@@ -50,7 +50,7 @@ const tools = [
         input_path: { type: "string" },
         output_dir: { type: "string" },
         mode: { type: "string", enum: ["vtracer", "pixel"], default: "vtracer" },
-        mask_mode: { type: "string", enum: ["auto", "alpha", "flood", "warm-icon", "none"], default: "auto" },
+        mask_mode: { type: "string", enum: ["auto", "alpha", "flood", "warm-icon", "checkerboard", "none"], default: "auto" },
         quality_profile: { type: "string", enum: ["compact", "balanced", "fidelity"], default: "balanced" },
         name: { type: "string" }
       },
@@ -93,7 +93,7 @@ const tools = [
         input_path: { type: "string" },
         output_dir: { type: "string" },
         mode: { type: "string", enum: ["vtracer", "pixel", "both"], default: "vtracer" },
-        mask_mode: { type: "string", enum: ["auto", "alpha", "flood", "warm-icon", "none"], default: "auto" },
+        mask_mode: { type: "string", enum: ["auto", "alpha", "flood", "warm-icon", "checkerboard", "none"], default: "auto" },
         quality_profile: { type: "string", enum: ["compact", "balanced", "fidelity"], default: "balanced" },
         repair: { type: "boolean", default: false }
       },

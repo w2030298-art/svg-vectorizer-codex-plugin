@@ -1,0 +1,31 @@
+{
+  "status": "warn",
+  "renderer": "resvg-js",
+  "renderer_warning": null,
+  "recommended_action": "Candidate is usable but should be reviewed or repaired.",
+  "source_image": "docs/gallery/real-world/sources/checkerboard_rgb_icon.png",
+  "svg": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/checkerboard_rgb_icon_checkerboard_vtracer.svg",
+  "prepared_png": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/checkerboard_rgb_icon_checkerboard_prepared.png",
+  "rendered_png": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_rendered.png",
+  "diff_png": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_diff.png",
+  "metrics": {
+    "source_foreground_pixels": 2009,
+    "rendered_foreground_pixels": 2122,
+    "alpha_iou": 0.9467483506126296,
+    "rgba_ssim": 0.9425507862772027,
+    "mean_abs_rgba_delta": 1.6268988715277777
+  },
+  "structure": {
+    "svg_width": "96",
+    "svg_height": "96",
+    "viewBox": null,
+    "path_count": 2,
+    "fill_count": 2,
+    "fills": {
+      "#226EDC": 1,
+      "#EEF6FF": 1
+    },
+    "svg_bytes": 1105
+  },
+  "primary_issues": []
+}

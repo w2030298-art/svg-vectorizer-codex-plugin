@@ -11,8 +11,8 @@ without starting browser or HTTP preview services.
 
 See the [real-world gallery](docs/gallery/real-world/README.md) for source
 images, vtracer and pixel SVG candidates, diff contact sheets, assessment JSON,
-and browser-open review screenshots across logo, icon, warm-icon, and photo
-inputs.
+and browser-open review screenshots across logo, icon, warm-icon, photo,
+and baked RGB checkerboard inputs.
 
 ## Sources of truth
 
@@ -70,12 +70,15 @@ through the MCP tools in this order:
 1. Use `run_svg_pipeline` by default with `mode: "vtracer"` and `mask_mode: "auto"`.
 2. Use `mode: "pixel"` only for explicit pixel-level fidelity or exact-match requests.
 3. Use `mode: "both"` when comparing vtracer and pixel routes.
-4. Run `repair_svg_trace` only when requested or when validation shows the trace needs another bounded parameter pass.
+4. Use `mask_mode: "checkerboard"` only for RGB/no-alpha inputs where transparency is baked as a light gray/white checkerboard. This is opt-in and is not selected by `auto`.
+5. Run `repair_svg_trace` only when requested or when validation shows the trace needs another bounded parameter pass.
 
 Background handling follows the same skill guidance: `alpha` for sources that
 already have transparency, `warm-icon` for orange/black icons on gradient or
-shadowed backgrounds, `flood` for mostly flat solid backgrounds, and `none` only
-when the full image including the background should be traced.
+shadowed backgrounds, `flood` for mostly flat solid backgrounds, `checkerboard`
+for baked light gray/white checkerboards in RGB inputs, and `none` only when the
+full image including the background should be traced. `checkerboard` remains
+opt-in so existing `auto` behavior does not change for prior inputs.
 
 ## Tool Reference
 
@@ -108,7 +111,7 @@ default entry point for normal requests.
 | `input_path` | yes | - | Raster source path: PNG, JPEG/JPG, or WebP. Unsupported actual file formats are rejected with a readable error. |
 | `output_dir` | yes | - | Directory for SVG, prepared PNG, validation artifacts, and `pipeline_manifest.json`. |
 | `mode` | no | `vtracer` | `vtracer`, `pixel`, or `both`. `both` writes separate vtracer and pixel candidates. |
-| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, or `none`. |
+| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, `checkerboard`, or `none`. |
 | `quality_profile` | no | `balanced` | `compact`, `balanced`, or `fidelity`; applies to vtracer output. |
 | `repair` | no | `false` | When `true`, runs bounded repair after a non-`both` pipeline. |
 
@@ -127,7 +130,7 @@ least one supported input is found.
 | `input_path` | yes | - | Directory, file, or glob pattern. Directory scans include direct child `png`, `jpg`, `jpeg`, and `webp` files. |
 | `output_dir` | yes | - | Directory for per-image output folders plus `batch_manifest.json`. |
 | `mode` | no | `vtracer` | `vtracer`, `pixel`, or `both`; passed through to `run_svg_pipeline`. |
-| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, or `none`. |
+| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, `checkerboard`, or `none`. |
 | `quality_profile` | no | `balanced` | `compact`, `balanced`, or `fidelity`. |
 | `repair` | no | `false` | Runs bounded repair for each single-candidate image when true. |
 | `max_workers` | no | `2` | Upper bound for concurrent image jobs. |
@@ -146,7 +149,7 @@ Converts one raster image into one SVG candidate.
 | `input_path` | yes | - | Raster source path. |
 | `output_dir` | yes | - | Directory for the prepared PNG, SVG, and candidate manifest. |
 | `mode` | no | `vtracer` | `vtracer` or `pixel`. |
-| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, or `none`. |
+| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, `checkerboard`, or `none`. |
 | `quality_profile` | no | `balanced` | `compact`, `balanced`, or `fidelity`. Pixel mode ignores the vtracer settings but should use `fidelity` for clarity. |
 | `name` | no | source stem | Optional output stem. |
 
@@ -210,6 +213,12 @@ Validate an existing SVG candidate:
 svg-vectorizer validate tests/fixtures/warm_icon.png tmp/readme-vtracer/warm_icon_vtracer.svg tmp/readme-vtracer/validation-again --prepared-png-path tmp/readme-vtracer/warm_icon_prepared.png
 ```
 
+Remove a baked RGB checkerboard background explicitly:
+
+```sh
+svg-vectorizer pipeline docs/gallery/real-world/sources/checkerboard_rgb_icon.png tmp/readme-checkerboard --mode vtracer --mask-mode checkerboard --quality-profile balanced
+```
+
 Run bounded repair against a previous pipeline manifest:
 
 ```sh
@@ -232,6 +241,16 @@ setup fails, exits non-zero, or times out, validation returns
 the whole request. In degraded mode, use structural metrics plus the generated
 artifacts for review; exact SVG raster metrics are unavailable until the
 renderer is installed.
+
+### Baked checkerboard backgrounds
+
+RGB images sometimes contain fake transparency: the transparent area has already
+been baked into pixels as an alternating light gray/white checkerboard. Use
+`mask_mode: "checkerboard"` for those cases. The detector looks for two light
+border colors arranged as regular alternating tiles, then makes matching
+checkerboard pixels transparent before vectorization. The default `auto` mode
+still chooses alpha when real transparency exists and otherwise uses flood, so
+existing alpha/flood/warm-icon/none workflows keep their previous behavior.
 
 ### Input formats and size limits
 

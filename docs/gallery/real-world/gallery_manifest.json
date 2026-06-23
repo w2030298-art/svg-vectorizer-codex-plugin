@@ -195,6 +195,79 @@
           "assessment_json": "docs/gallery/real-world/flower-photo/pixel/validation/flower_photo_pixel_assessment.json"
         }
       ]
+    },
+    {
+      "id": "checkerboard-rgb-icon",
+      "category": "baked RGB checkerboard transparency",
+      "source_image": "sources/checkerboard_rgb_icon.png",
+      "source": "Synthetic RGB no-alpha icon with a baked #ffffff/#c4c4c4 checkerboard background for WEN-426 mask-mode validation",
+      "mask_mode": "auto vs checkerboard",
+      "quality_profile": "balanced",
+      "mode": "vtracer before-after",
+      "candidates": [
+        {
+          "mode": "vtracer",
+          "variant": "auto-before",
+          "mask_mode": "flood",
+          "checkerboard_detected": false,
+          "checkerboard_tile_size": null,
+          "foreground_pixels": 9216,
+          "svg": "docs/gallery/real-world/checkerboard-rgb-icon/auto/checkerboard_rgb_icon_auto_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/checkerboard-rgb-icon/auto/checkerboard_rgb_icon_auto_prepared.png",
+          "path_count": 54,
+          "fill_count": 8,
+          "svg_bytes": 10835,
+          "fills": {
+            "#C4C4C4": 24,
+            "#226EDC": 1,
+            "#F5F5F5": 1,
+            "#FFFFFF": 24,
+            "#CECECE": 1,
+            "#EEF6FF": 1,
+            "#EEEEEE": 1,
+            "#D3D3D3": 1
+          },
+          "status": "pass",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 0.9604981986804719,
+            "mean_abs_rgba_delta": 1.6119791666666667,
+            "source_foreground_pixels": 9216,
+            "rendered_foreground_pixels": 9216
+          },
+          "diff_png": "docs/gallery/real-world/checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_assessment.json"
+        },
+        {
+          "mode": "vtracer",
+          "variant": "checkerboard-after",
+          "mask_mode": "checkerboard",
+          "checkerboard_detected": true,
+          "checkerboard_tile_size": 12,
+          "foreground_pixels": 2009,
+          "svg": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/checkerboard_rgb_icon_checkerboard_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/checkerboard_rgb_icon_checkerboard_prepared.png",
+          "path_count": 2,
+          "fill_count": 2,
+          "svg_bytes": 1105,
+          "fills": {
+            "#226EDC": 1,
+            "#EEF6FF": 1
+          },
+          "status": "warn",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 0.9467483506126296,
+            "rgba_ssim": 0.9425507862772027,
+            "mean_abs_rgba_delta": 1.6268988715277777,
+            "source_foreground_pixels": 2009,
+            "rendered_foreground_pixels": 2122
+          },
+          "diff_png": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/checkerboard-rgb-icon/checkerboard/validation/checkerboard_rgb_icon_checkerboard_vtracer_assessment.json"
+        }
+      ]
     }
   ]
 }

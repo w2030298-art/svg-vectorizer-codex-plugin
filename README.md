@@ -80,14 +80,15 @@ when the full image including the background should be traced.
 ## Tool Reference
 
 Tools are exposed through MCP in Codex and through the standalone
-`svg-vectorizer` CLI for local development or scripts. The four CLI subcommands
-map one-to-one to the core Python tools:
+`svg-vectorizer` CLI for local development or scripts. The CLI subcommands map
+to the core Python tools:
 
 ```sh
 svg-vectorizer convert INPUT_IMAGE OUTPUT_DIR [--mode vtracer|pixel]
 svg-vectorizer validate SOURCE_IMAGE SVG_PATH OUTPUT_DIR
 svg-vectorizer repair MANIFEST_PATH OUTPUT_DIR [--budget 1..6]
 svg-vectorizer pipeline INPUT_IMAGE OUTPUT_DIR [--mode vtracer|pixel|both] [--repair]
+svg-vectorizer batch INPUT_DIR_OR_GLOB OUTPUT_DIR [--max-workers 2]
 ```
 
 The legacy JSON shim used by the MCP server remains available for reproducible
@@ -114,6 +115,27 @@ default entry point for normal requests.
 Output: a JSON result with the selected mode, artifact paths, SVG structure
 stats, validation status and metrics for single-candidate modes, and
 `pipeline_manifest.json`.
+
+### `run_batch_pipeline`
+
+Runs `run_svg_pipeline` for every supported image in a directory or glob. Batch
+runs isolate per-image failures and always write a summary manifest when at
+least one supported input is found.
+
+| Parameter | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `input_path` | yes | - | Directory, file, or glob pattern. Directory scans include direct child `png`, `jpg`, `jpeg`, and `webp` files. |
+| `output_dir` | yes | - | Directory for per-image output folders plus `batch_manifest.json`. |
+| `mode` | no | `vtracer` | `vtracer`, `pixel`, or `both`; passed through to `run_svg_pipeline`. |
+| `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, or `none`. |
+| `quality_profile` | no | `balanced` | `compact`, `balanced`, or `fidelity`. |
+| `repair` | no | `false` | Runs bounded repair for each single-candidate image when true. |
+| `max_workers` | no | `2` | Upper bound for concurrent image jobs. |
+
+Output: `batch_manifest.json` with `total`, `succeeded`, `failed`, and one
+item per input. Successful items include SVG paths, per-image manifests, and key
+metrics. Failed items include `error_type` and `error` without stopping the
+rest of the batch.
 
 ### `convert_image_to_svg`
 
@@ -193,6 +215,12 @@ Run bounded repair against a previous pipeline manifest:
 svg-vectorizer repair tmp/readme-vtracer/pipeline_manifest.json tmp/readme-repair --budget 2
 ```
 
+Run every fixture image with at most two workers:
+
+```sh
+svg-vectorizer batch tests/fixtures tmp/readme-batch --mode pixel --mask-mode auto --quality-profile fidelity --max-workers 2
+```
+
 ## Degraded Mode And Troubleshooting
 
 ### Renderer unavailable
@@ -225,6 +253,11 @@ errors, such as a missing input image or invalid manifest, exit with code `1`
 and print `error: ...` to stderr without a Python traceback. The legacy
 `pipeline_cli.py --tool ... --input-json ...` route prints JSON to stderr on
 runtime failures so MCP callers can surface structured diagnostics.
+
+Batch runs return exit code `0` when the batch itself completes, even if one or
+more images fail; inspect `failed` and failed item records in
+`batch_manifest.json`. A batch with no matching supported images exits with
+code `1`.
 
 ### Python versions
 

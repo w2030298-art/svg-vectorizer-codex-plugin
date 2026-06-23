@@ -56,6 +56,32 @@ class ConsoleCliTests(unittest.TestCase):
             self.assertIn("missing.png", result.stderr)
             self.assertNotIn("Traceback", result.stderr)
 
+    def test_batch_subcommand_writes_summary_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "batch"
+
+            result = self.run_cli(
+                "batch",
+                str(FIXTURES),
+                str(output_dir),
+                "--mode",
+                "pixel",
+                "--mask-mode",
+                "auto",
+                "--quality-profile",
+                "fidelity",
+                "--max-workers",
+                "2",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["total"], 3)
+            self.assertEqual(payload["succeeded"], 3)
+            self.assertEqual(payload["failed"], 0)
+            self.assertTrue(Path(payload["manifest"]).exists())
+            self.assertTrue((output_dir / "transparent_icon" / "transparent_icon_pixel.svg").exists())
+
     def test_pyproject_declares_svg_vectorizer_console_script(self):
         metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 

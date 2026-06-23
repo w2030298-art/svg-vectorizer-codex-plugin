@@ -22,6 +22,7 @@ const PYTHON_OVERRIDE_ENV = "SVG_VECTORIZER_PYTHON";
 const SUPPORTED_PYTHON_MIN = { major: 3, minor: 10 };
 const SUPPORTED_PYTHON_MAX = { major: 3, minor: 12 };
 const SUPPORTED_PYTHON_LABEL = "Python 3.10 through 3.12";
+const PYTHON_TOOL_TIMEOUT_MS = 120000;
 const CORE_PYTHON_MODULES = ["cv2", "numpy", "PIL", "skimage", "vtracer"];
 const DEPENDENCY_PROBE_SCRIPT = `
 import importlib
@@ -241,6 +242,16 @@ function findPython() {
   );
 }
 
+function isTimeoutResult(result) {
+  const error = result && result.error;
+  if (!error) return false;
+  return error.code === "ETIMEDOUT" || /timed out|ETIMEDOUT/i.test(String(error.message || ""));
+}
+
+function timeoutSeconds(timeoutMs) {
+  return Math.round(timeoutMs / 1000);
+}
+
 function parseMissingModules(result) {
   const stdout = String((result && result.stdout) || "").trim();
   for (const line of stdout.split(/\r?\n/).reverse()) {
@@ -417,10 +428,16 @@ function callPythonTool(name, args) {
   const result = childProcess.spawnSync(
     python,
     [PY_CLI, "--tool", name, "--input-json", JSON.stringify(args || {})],
-    { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024, env }
+    { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024, env, timeout: PYTHON_TOOL_TIMEOUT_MS }
   );
+  if (isTimeoutResult(result)) {
+    throw new Error(
+      `Python tool ${name} timed out after ${timeoutSeconds(PYTHON_TOOL_TIMEOUT_MS)} seconds. ` +
+        `Input may be too large or the Python runtime may be hung. Runtime venv: ${VENV_DIR}.`
+    );
+  }
   if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || `Python tool ${name} failed`);
+    throw new Error(result.stderr || result.stdout || (result.error && result.error.message) || `Python tool ${name} failed`);
   }
   return JSON.parse(result.stdout);
 }

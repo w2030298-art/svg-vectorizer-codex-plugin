@@ -575,6 +575,45 @@ return { renderer: sandbox.ensureNodeRenderer() };
         self.assertIsNone(report["rendered_png"])
         self.assertIn("npm install @resvg/resvg-js@2.6.2 --include=optional failed", report["renderer_warning"])
 
+    def test_python_tool_timeout_is_reported_with_actionable_error(self):
+        result = run_mcp_server_harness(
+            """
+function(command, args = [], options = {}) {
+  calls.push({ command, args, timeout: options.timeout || null });
+  const commandText = String(command).replace(/\\\\/g, "/");
+  const isVenvPython = commandText.endsWith("/.cache/svg-vectorizer-codex-plugin/venv/Scripts/python.exe");
+  if (isVenvPython && args.includes("-c")) {
+    return { status: 0, stdout: '{"missing": []}\\n', stderr: "" };
+  }
+  if (isVenvPython && args.includes("--tool")) {
+    return {
+      status: null,
+      stdout: "",
+      stderr: "",
+      error: { code: "ETIMEDOUT", message: "spawnSync python ETIMEDOUT" }
+    };
+  }
+  return { status: 1, stdout: "", stderr: `unexpected ${command} ${args.join(" ")}` };
+}
+""",
+            """
+const venvPython = path.join(fakeHome, ".cache", "svg-vectorizer-codex-plugin", "venv", "Scripts", "python.exe");
+fs.mkdirSync(path.dirname(venvPython), { recursive: true });
+fs.writeFileSync(venvPython, "", "utf-8");
+try {
+  sandbox.callPythonTool("convert_image_to_svg", { input_path: "input.png", output_dir: "out" });
+  return { ok: true };
+} catch (error) {
+  return { ok: false, message: error.message };
+}
+""",
+            platform="win32",
+        )
+
+        self.assertFalse(result["payload"]["ok"])
+        self.assertIn("Python tool convert_image_to_svg timed out after 120 seconds", result["payload"]["message"])
+        tool_calls = [call for call in result["calls"] if "--tool" in call["args"]]
+        self.assertEqual(tool_calls[0]["timeout"], 120000)
 
 if __name__ == "__main__":
     unittest.main()

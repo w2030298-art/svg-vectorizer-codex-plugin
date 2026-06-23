@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob as globlib
 import json
 import math
 import os
@@ -7,6 +8,7 @@ import re
 import subprocess
 import xml.etree.ElementTree as ET
 from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +46,8 @@ QUALITY_PROFILES = {
     },
 }
 
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+
 
 def _path(value: str | Path) -> Path:
     return Path(value).expanduser().resolve()
@@ -52,6 +56,35 @@ def _path(value: str | Path) -> Path:
 def _safe_stem(path: Path) -> str:
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", path.stem).strip("._")
     return stem or "trace"
+
+
+def _has_glob_meta(value: str) -> bool:
+    return any(char in value for char in "*?[")
+
+
+def _is_batch_image(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def _discover_batch_inputs(input_path: str | Path) -> list[Path]:
+    input_text = os.path.expanduser(str(input_path))
+    if _has_glob_meta(input_text):
+        candidates = [Path(match).resolve() for match in globlib.glob(input_text)]
+    else:
+        path = Path(input_text).resolve()
+        if path.is_dir():
+            candidates = [child.resolve() for child in path.iterdir()]
+        else:
+            candidates = [path]
+
+    seen: set[Path] = set()
+    images = []
+    for candidate in sorted(candidates, key=lambda item: str(item).lower()):
+        if candidate in seen or not _is_batch_image(candidate):
+            continue
+        seen.add(candidate)
+        images.append(candidate)
+    return images
 
 
 def _hex(rgb: tuple[int, int, int]) -> str:
@@ -440,6 +473,122 @@ def run_svg_pipeline(
     result["manifest"] = str(manifest)
     if repair and mode != "both":
         result["repair"] = repair_svg_trace(manifest, output_dir / "repair")
+    return result
+
+
+def _batch_metrics(result: dict[str, Any]) -> dict[str, Any]:
+    metrics = {
+        key: result[key]
+        for key in ("path_count", "fill_count", "svg_bytes", "foreground_pixels")
+        if key in result
+    }
+    validation = result.get("validation")
+    if isinstance(validation, dict):
+        metrics["validation_status"] = validation.get("status")
+        validation_metrics = validation.get("metrics") or {}
+        for key in ("alpha_iou", "rgba_ssim", "mean_abs_rgba_delta"):
+            if key in validation_metrics:
+                metrics[key] = validation_metrics[key]
+    return metrics
+
+
+def _batch_success_item(input_path: Path, output_dir: Path, result: dict[str, Any]) -> dict[str, Any]:
+    item = {
+        "status": "success",
+        "input": str(input_path),
+        "output_dir": str(output_dir),
+        "mode": result["mode"],
+        "item_manifest": result["manifest"],
+    }
+    if "svg" in result:
+        item["svg"] = result["svg"]
+        item["metrics"] = _batch_metrics(result)
+    if "candidates" in result:
+        item["candidates"] = [
+            {
+                "mode": candidate["mode"],
+                "svg": candidate["svg"],
+                "manifest": candidate["manifest"],
+                "metrics": _batch_metrics(candidate),
+            }
+            for candidate in result["candidates"]
+        ]
+    return item
+
+
+def run_batch_pipeline(
+    input_path: str | Path,
+    output_dir: str | Path,
+    mode: str = "vtracer",
+    mask_mode: str = "auto",
+    quality_profile: str = "balanced",
+    repair: bool = False,
+    max_workers: int = 2,
+) -> dict[str, Any]:
+    inputs = _discover_batch_inputs(input_path)
+    if not inputs:
+        raise ValueError(f"no supported raster images matched: {input_path}")
+    if max_workers < 1:
+        raise ValueError("max_workers must be at least 1")
+
+    output_dir = _path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    worker_count = min(max_workers, len(inputs))
+    seen_stems: dict[str, int] = {}
+    jobs = []
+    for source in inputs:
+        stem = _safe_stem(source)
+        seen_stems[stem] = seen_stems.get(stem, 0) + 1
+        output_name = stem if seen_stems[stem] == 1 else f"{stem}_{seen_stems[stem]}"
+        jobs.append((source, output_dir / output_name))
+
+    def run_one(source: Path, item_output_dir: Path) -> dict[str, Any]:
+        try:
+            result = run_svg_pipeline(
+                input_path=source,
+                output_dir=item_output_dir,
+                mode=mode,
+                mask_mode=mask_mode,
+                quality_profile=quality_profile,
+                repair=repair,
+            )
+        except Exception as exc:
+            return {
+                "status": "failed",
+                "input": str(source),
+                "output_dir": str(item_output_dir),
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+        return _batch_success_item(source, item_output_dir, result)
+
+    items: list[dict[str, Any] | None] = [None] * len(jobs)
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {
+            executor.submit(run_one, source, item_output_dir): index
+            for index, (source, item_output_dir) in enumerate(jobs)
+        }
+        for future in as_completed(futures):
+            items[futures[future]] = future.result()
+
+    completed_items = [item for item in items if item is not None]
+    succeeded = sum(1 for item in completed_items if item["status"] == "success")
+    manifest = output_dir / "batch_manifest.json"
+    result = {
+        "input": str(input_path),
+        "output_dir": str(output_dir),
+        "mode": mode,
+        "mask_mode": mask_mode,
+        "quality_profile": quality_profile,
+        "repair": repair,
+        "max_workers": worker_count,
+        "total": len(completed_items),
+        "succeeded": succeeded,
+        "failed": len(completed_items) - succeeded,
+        "items": completed_items,
+        "manifest": str(manifest),
+    }
+    manifest.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return result
 
 

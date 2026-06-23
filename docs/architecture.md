@@ -16,9 +16,10 @@ workflow.
 - `plugins/svg-vectorizer/server/mcp-server.cjs` is the Node MCP runtime and
   bootstrapper.
 - `plugins/svg-vectorizer/server/pipeline_cli.py` is the local CLI shim. It
-  dispatches JSON payloads to the same Python functions used by MCP.
+  exposes human-oriented subcommands and the legacy JSON payload route used by
+  MCP.
 - `plugins/svg-vectorizer/server/svg_vectorizer_pipeline.py` contains the core
-  conversion, validation, and repair logic.
+  conversion, validation, repair, and batch orchestration logic.
 - `plugins/svg-vectorizer/server/render_svg_with_resvg.cjs` renders SVGs to PNG
   through `@resvg/resvg-js` for validation metrics.
 - `tests/` covers the Python pipeline and MCP smoke behavior. `docs/gallery/`
@@ -41,7 +42,8 @@ The installed plugin flow is:
    and returns JSON. The MCP server wraps that JSON as text content in the MCP
    response.
 
-For local development, the CLI starts at step 4 and bypasses MCP bootstrap:
+For local development, the legacy JSON CLI starts at step 4 and bypasses MCP
+bootstrap:
 
 ```sh
 python plugins/svg-vectorizer/server/pipeline_cli.py --tool run_svg_pipeline --input-json '{"input_path":"tests/fixtures/warm_icon.png","output_dir":"tmp/architecture-smoke","mode":"vtracer","mask_mode":"warm-icon"}'
@@ -104,6 +106,12 @@ enabled validation is controlled by:
 `mode: "both"` writes separate `vtracer` and `pixel` candidates and a pipeline
 manifest for comparison. It does not run validation or repair automatically.
 
+`run_batch_pipeline` wraps `run_svg_pipeline` for directory, file, or glob
+inputs. It writes one subdirectory per image, preserves per-image pipeline
+manifests, isolates individual image failures, and writes a top-level
+`batch_manifest.json` with success/failure counts and key metrics. Worker
+parallelism is bounded by `max_workers` so batch runs do not consume every CPU.
+
 ## Artifacts
 
 The pipeline writes all generated files below the requested `output_dir`:
@@ -115,6 +123,7 @@ The pipeline writes all generated files below the requested `output_dir`:
 - validation diff PNG/contact sheet
 - validation assessment JSON
 - pipeline manifest JSON
+- batch manifest JSON when batch mode is used
 - repair report JSON when repair is requested
 
 Generated outputs belong outside tracked source paths unless they are deliberate

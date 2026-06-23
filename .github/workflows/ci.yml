@@ -56,6 +56,9 @@ jobs:
       - name: Run CLI smoke test
         run: svg-vectorizer convert tests/fixtures/transparent_icon.png tmp/ci-cli --mode pixel --mask-mode alpha --quality-profile fidelity
 
+      - name: Run batch CLI smoke test
+        run: svg-vectorizer batch tests/fixtures tmp/ci-batch --mode pixel --mask-mode auto --quality-profile fidelity --max-workers 2
+
       - name: Run CLI tests
         run: python -m unittest tests.test_cli -v
 

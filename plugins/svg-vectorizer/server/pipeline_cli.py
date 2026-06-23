@@ -7,6 +7,7 @@ import sys
 from svg_vectorizer_pipeline import (
     convert_image_to_svg,
     repair_svg_trace,
+    run_batch_pipeline,
     run_svg_pipeline,
     validate_svg_trace,
 )
@@ -16,6 +17,7 @@ TOOLS = {
     "convert_image_to_svg": convert_image_to_svg,
     "validate_svg_trace": validate_svg_trace,
     "repair_svg_trace": repair_svg_trace,
+    "run_batch_pipeline": run_batch_pipeline,
     "run_svg_pipeline": run_svg_pipeline,
 }
 
@@ -106,6 +108,26 @@ def _build_subcommand_parser() -> argparse.ArgumentParser:
             mask_mode=args.mask_mode,
             quality_profile=args.quality_profile,
             repair=args.repair,
+        )
+    )
+
+    batch = subcommands.add_parser("batch", help="Run the pipeline for every image in a directory or glob.")
+    batch.add_argument("input_path")
+    batch.add_argument("output_dir")
+    batch.add_argument("--mode", choices=("vtracer", "pixel", "both"), default="vtracer")
+    batch.add_argument("--mask-mode", choices=("auto", "alpha", "flood", "warm-icon", "none"), default="auto")
+    batch.add_argument("--quality-profile", choices=("compact", "balanced", "fidelity"), default="balanced")
+    batch.add_argument("--repair", action="store_true")
+    batch.add_argument("--max-workers", type=int, default=2)
+    batch.set_defaults(
+        handler=lambda args: run_batch_pipeline(
+            input_path=args.input_path,
+            output_dir=args.output_dir,
+            mode=args.mode,
+            mask_mode=args.mask_mode,
+            quality_profile=args.quality_profile,
+            repair=args.repair,
+            max_workers=args.max_workers,
         )
     )
     return parser

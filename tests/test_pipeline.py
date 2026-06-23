@@ -18,6 +18,7 @@ RENDER_HELPER = PLUGIN_ROOT / "server" / "render_svg_with_resvg.cjs"
 from svg_vectorizer_pipeline import (
     convert_image_to_svg,
     repair_svg_trace,
+    run_batch_pipeline,
     run_svg_pipeline,
     validate_svg_trace,
 )
@@ -203,6 +204,62 @@ class PipelineTests(unittest.TestCase):
                 self.assertTrue(Path(candidate["prepared_png"]).exists())
                 self.assertTrue(Path(candidate["manifest"]).exists())
                 self.assertGreater(candidate["path_count"], 0)
+
+    def test_batch_pipeline_records_successes_and_isolated_failures(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            inputs = root / "inputs"
+            inputs.mkdir()
+            shutil.copy2(fixture("transparent_icon.png"), inputs / "transparent_icon.png")
+            shutil.copy2(fixture("warm_icon.png"), inputs / "warm_icon.png")
+            (inputs / "broken.png").write_text("not an image\n", encoding="utf-8")
+
+            result = run_batch_pipeline(
+                input_path=inputs,
+                output_dir=root / "batch",
+                mode="pixel",
+                mask_mode="auto",
+                quality_profile="fidelity",
+                max_workers=2,
+            )
+
+            self.assertEqual(result["total"], 3)
+            self.assertEqual(result["succeeded"], 2)
+            self.assertEqual(result["failed"], 1)
+            self.assertTrue(Path(result["manifest"]).exists())
+
+            successful = [item for item in result["items"] if item["status"] == "success"]
+            failed = [item for item in result["items"] if item["status"] == "failed"]
+            self.assertEqual(len(successful), 2)
+            self.assertEqual(len(failed), 1)
+            for item in successful:
+                self.assertTrue(Path(item["svg"]).exists())
+                self.assertTrue(Path(item["item_manifest"]).exists())
+                self.assertIn("path_count", item["metrics"])
+            self.assertTrue(failed[0]["input"].endswith("broken.png"))
+            self.assertIn("error", failed[0])
+
+    def test_batch_pipeline_accepts_glob_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            inputs = root / "inputs"
+            inputs.mkdir()
+            shutil.copy2(fixture("transparent_icon.png"), inputs / "transparent_icon.png")
+            shutil.copy2(fixture("warm_icon.png"), inputs / "warm_icon.png")
+
+            result = run_batch_pipeline(
+                input_path=str(inputs / "*.png"),
+                output_dir=root / "batch",
+                mode="pixel",
+                mask_mode="auto",
+                quality_profile="fidelity",
+                max_workers=1,
+            )
+
+            self.assertEqual(result["total"], 2)
+            self.assertEqual(result["succeeded"], 2)
+            self.assertEqual(result["failed"], 0)
+            self.assertTrue(Path(result["manifest"]).exists())
 
     def test_mask_modes_cover_alpha_flood_warm_icon_and_none(self):
         cases = [

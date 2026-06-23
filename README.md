@@ -19,6 +19,8 @@ inputs.
 This README is the current-state snapshot and entry point, not a changelog.
 
 - **Overview · how to run · architecture** -> this README.
+- **Contributor architecture** -> [docs/architecture.md](docs/architecture.md).
+- **Contributing workflow** -> [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Version / what shipped** -> [GitHub Releases](../../releases). The marketplace plugin is currently `v0.1.0`; the first GitHub Release is cut at `v0.2.0`.
 - **Status · decisions · progress** -> [Linear project](https://linear.app/wentaoxu-personal-workplace/project/svg-vectorizer图像转-svg-插件加固功能扩展与双平台适配-668f68c543f2/overview).
 
@@ -220,10 +222,14 @@ npm install @resvg/resvg-js@2.6.2 --include=optional --omit=dev --no-audit --no-
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow and
+[docs/architecture.md](docs/architecture.md) for the MCP, CLI, runtime cache,
+and pipeline architecture.
+
 Windows PowerShell:
 
 ```powershell
-py -m venv .venv
+py -3.10 -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
 .\.venv\Scripts\python -m pip install -r plugins\svg-vectorizer\server\requirements.txt
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
@@ -233,7 +239,7 @@ py -m venv .venv
 POSIX shells:
 
 ```sh
-python3 -m venv .venv
+python3.10 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r plugins/svg-vectorizer/server/requirements.txt

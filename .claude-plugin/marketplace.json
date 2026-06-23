@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "svg-tools",
+  "owner": {
+    "name": "SVG Vectorizer Contributors",
+    "url": "https://github.com/w2030298-art/svg-vectorizer-codex-plugin"
+  },
+  "plugins": [
+    {
+      "name": "svg-vectorizer",
+      "description": "Convert raster images into clean or high-fidelity SVGs with validation and optional repair.",
+      "source": "./plugins/svg-vectorizer",
+      "category": "productivity",
+      "version": "0.1.0",
+      "author": {
+        "name": "SVG Vectorizer Contributors",
+        "url": "https://github.com/w2030298-art/svg-vectorizer-codex-plugin"
+      }
+    }
+  ]
+}

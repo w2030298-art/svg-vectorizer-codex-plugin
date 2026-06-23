@@ -7,12 +7,25 @@ workflow.
 
 ## Repository Shape
 
+The repository ships **one core and two thin platform shells** that both point
+at it. `plugins/svg-vectorizer/server/` is the single core and is never
+duplicated; the shells only adapt manifest format and MCP path resolution.
+
 - `plugins/svg-vectorizer/.codex-plugin/plugin.json` is the Codex plugin
   manifest. It points Codex at the bundled skills and MCP server config.
-- `plugins/svg-vectorizer/.mcp.json` registers the `svgVectorizer` MCP server
-  and starts `node ./server/mcp-server.cjs` from the plugin directory.
-- `plugins/svg-vectorizer/skills/svg-vectorizer/SKILL.md` is the agent routing
-  guide for image-to-SVG requests.
+- `plugins/svg-vectorizer/.mcp.json` is the Codex MCP wiring. It registers the
+  `svgVectorizer` MCP server and starts `node ./server/mcp-server.cjs` from the
+  plugin directory using a plugin-root `cwd`.
+- `plugins/svg-vectorizer/.claude-plugin/plugin.json` is the Claude Code plugin
+  manifest. It wires the same `svgVectorizer` server inline with
+  `${CLAUDE_PLUGIN_ROOT}/server/mcp-server.cjs`, which is how Claude Code
+  resolves plugin-root paths. Skills are auto-discovered from `skills/`, so the
+  manifest does not duplicate the skill tree.
+- `.claude-plugin/marketplace.json` (repository root) registers this repo as the
+  `svg-tools` Claude Code marketplace so
+  `claude plugin install svg-vectorizer@svg-tools` works.
+- `plugins/svg-vectorizer/skills/svg-vectorizer/SKILL.md` is the single agent
+  routing guide for image-to-SVG requests, shared by both shells.
 - `plugins/svg-vectorizer/server/mcp-server.cjs` is the Node MCP runtime and
   bootstrapper.
 - `plugins/svg-vectorizer/server/pipeline_cli.py` is the local CLI shim. It
@@ -22,15 +35,22 @@ workflow.
   conversion, validation, repair, and batch orchestration logic.
 - `plugins/svg-vectorizer/server/render_svg_with_resvg.cjs` renders SVGs to PNG
   through `@resvg/resvg-js` for validation metrics.
-- `tests/` covers the Python pipeline and MCP smoke behavior. `docs/gallery/`
-  stores source-backed gallery evidence, not runtime state.
+- `tests/` covers the Python pipeline, MCP smoke behavior, and the dual-shell
+  manifest invariants. `docs/gallery/` stores source-backed gallery evidence,
+  not runtime state.
 
 ## MCP Data Flow
 
-The installed plugin flow is:
+The installed plugin flow is identical from step 3 onward on both platforms;
+only the manifest and MCP wiring differ in steps 1-2:
 
-1. Codex loads `plugin.json`, then `plugins/svg-vectorizer/.mcp.json`.
-2. Codex starts `mcp-server.cjs` as the `svgVectorizer` MCP server.
+1. **Codex** loads `.codex-plugin/plugin.json`, then
+   `plugins/svg-vectorizer/.mcp.json`, and starts `mcp-server.cjs` with a
+   plugin-root `cwd`. **Claude Code** loads `.claude-plugin/plugin.json`, whose
+   inline `mcpServers` starts the same `mcp-server.cjs` via
+   `${CLAUDE_PLUGIN_ROOT}/server/mcp-server.cjs`.
+2. Either host runs the single `mcp-server.cjs` core as the `svgVectorizer` MCP
+   server.
 3. The agent skill chooses one of the MCP tools:
    `run_svg_pipeline`, `convert_image_to_svg`, `validate_svg_trace`, or
    `repair_svg_trace`.

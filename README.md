@@ -1,11 +1,14 @@
-# SVG Vectorizer Codex Plugin
+# SVG Vectorizer
 
 [![CI](https://github.com/w2030298-art/svg-vectorizer-codex-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/w2030298-art/svg-vectorizer-codex-plugin/actions/workflows/ci.yml)
 
-Codex plugin for converting raster images to SVG with a convert, validate, and
-repair workflow. It defaults to compact editable `vtracer` output, can generate
-pixel-fidelity SVGs when exact raster matching matters, and validates traces
-without starting browser or HTTP preview services.
+Image-to-SVG plugin for **Codex** and **Claude Code**. One core conversion
+pipeline (`plugins/svg-vectorizer/server`) is shared by two thin platform
+shells — `.codex-plugin` for Codex and `.claude-plugin` for Claude Code — so
+both hosts expose the same convert, validate, and repair tools. It defaults to
+compact editable `vtracer` output, can generate pixel-fidelity SVGs when exact
+raster matching matters, and validates traces without starting browser or HTTP
+preview services.
 
 ## Gallery
 
@@ -47,10 +50,27 @@ The first tool call creates runtime caches under
 
 ### Claude Code
 
-Claude Code packaging is planned for a later milestone. The core conversion
-pipeline and MCP server already live in `plugins/svg-vectorizer/server`; the
-Claude Code adapter should stay thin and reuse the same core rather than forking
-tool behavior.
+The Claude Code shell reuses the same `server/` core as Codex through a thin
+`.claude-plugin` manifest; the `server/` directory is never copied. Add this
+repository as a plugin marketplace, then install the plugin:
+
+```sh
+claude plugin marketplace add w2030298-art/svg-vectorizer-codex-plugin@main
+claude plugin install svg-vectorizer@svg-tools
+```
+
+Or interactively inside a Claude Code session:
+
+```
+/plugin marketplace add w2030298-art/svg-vectorizer-codex-plugin
+/plugin install svg-vectorizer@svg-tools
+```
+
+Start a new Claude Code session after installing so the `svgVectorizer` MCP
+server and skill are loaded. The first tool call builds the same runtime caches
+under `~/.cache/svg-vectorizer-codex-plugin` as Codex: a Python venv with
+vtracer, OpenCV, scikit-image, Pillow, and NumPy, plus a Node runtime folder
+with `@resvg/resvg-js` for browserless SVG rendering.
 
 ### Standalone CLI
 
@@ -339,6 +359,7 @@ py -3.10 -m venv .venv
 .\.venv\Scripts\python -m unittest tests.test_cli -v
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
 .\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
+.\.venv\Scripts\python -m unittest tests.test_plugin_manifests -v
 ```
 
 POSIX shells:
@@ -352,6 +373,7 @@ python -m pip install -e .
 python -m unittest tests.test_cli -v
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
+python -m unittest tests.test_plugin_manifests -v
 ```
 
 Optional: validate the plugin manifest with the `validate_plugin.py` helper from

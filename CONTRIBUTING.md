@@ -41,6 +41,7 @@ py -3.10 -m venv .venv
 .\.venv\Scripts\python -m pip install -r plugins\svg-vectorizer\server\requirements.txt
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
 .\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
+.\.venv\Scripts\python -m unittest tests.test_plugin_manifests -v
 ```
 
 POSIX shells. Use `python3.10`, `python3.11`, or `python3.12`, depending on
@@ -53,6 +54,7 @@ python -m pip install --upgrade pip
 python -m pip install -r plugins/svg-vectorizer/server/requirements.txt
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
+python -m unittest tests.test_plugin_manifests -v
 ```
 
 The MCP smoke tests start the Node MCP server and exercise real JSON-RPC tool
@@ -89,6 +91,7 @@ Before opening a PR:
 git status -sb
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
+python -m unittest tests.test_plugin_manifests -v
 ```
 
 Use clear, issue-scoped commits. PR titles should include the Linear issue key

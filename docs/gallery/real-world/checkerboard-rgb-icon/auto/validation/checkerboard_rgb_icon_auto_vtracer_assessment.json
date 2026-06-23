@@ -1,0 +1,37 @@
+{
+  "status": "pass",
+  "renderer": "resvg-js",
+  "renderer_warning": null,
+  "recommended_action": "Candidate is suitable as a clean vector trace.",
+  "source_image": "docs/gallery/real-world/sources/checkerboard_rgb_icon.png",
+  "svg": "docs/gallery/real-world/checkerboard-rgb-icon/auto/checkerboard_rgb_icon_auto_vtracer.svg",
+  "prepared_png": "docs/gallery/real-world/checkerboard-rgb-icon/auto/checkerboard_rgb_icon_auto_prepared.png",
+  "rendered_png": "docs/gallery/real-world/checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_rendered.png",
+  "diff_png": "docs/gallery/real-world/checkerboard-rgb-icon/auto/validation/checkerboard_rgb_icon_auto_vtracer_diff.png",
+  "metrics": {
+    "source_foreground_pixels": 9216,
+    "rendered_foreground_pixels": 9216,
+    "alpha_iou": 1.0,
+    "rgba_ssim": 0.9604981986804719,
+    "mean_abs_rgba_delta": 1.6119791666666667
+  },
+  "structure": {
+    "svg_width": "96",
+    "svg_height": "96",
+    "viewBox": null,
+    "path_count": 54,
+    "fill_count": 8,
+    "fills": {
+      "#C4C4C4": 24,
+      "#226EDC": 1,
+      "#F5F5F5": 1,
+      "#FFFFFF": 24,
+      "#CECECE": 1,
+      "#EEF6FF": 1,
+      "#EEEEEE": 1,
+      "#D3D3D3": 1
+    },
+    "svg_bytes": 10835
+  },
+  "primary_issues": []
+}

@@ -139,8 +139,12 @@ selection:
   background pixels.
 - `warm-icon` isolates orange/black icon foregrounds on gradient or shadowed
   backgrounds.
+- `checkerboard` detects baked light gray/white checkerboard backgrounds in
+  RGB/no-alpha inputs and makes those pixels transparent before tracing.
 - `none` treats every pixel as foreground.
-- `auto` chooses alpha when transparency exists, otherwise flood.
+- `auto` chooses alpha when transparency exists, otherwise flood. It does not
+  select `checkerboard`, which keeps the WEN-426 strategy opt-in for backwards
+  compatibility.
 
 Vtracer profiles are fixed in `QUALITY_PROFILES`: `compact`, `balanced`, and
 `fidelity`. Pixel mode ignores those profiles and writes exact horizontal

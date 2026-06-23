@@ -39,6 +39,16 @@
       "mode": "both",
       "mask_mode": "none",
       "quality_profile": "compact"
+    },
+    {
+      "id": "checkerboard-rgb-icon",
+      "category": "baked RGB checkerboard transparency",
+      "source": "Synthetic RGB no-alpha icon with a baked #ffffff/#c4c4c4 checkerboard background for WEN-426 mask-mode validation",
+      "source_image": "sources/checkerboard_rgb_icon.png",
+      "original_image": "sources/checkerboard_rgb_icon.png",
+      "mode": "vtracer before-after",
+      "mask_mode": "auto vs checkerboard",
+      "quality_profile": "balanced"
     }
   ]
 }

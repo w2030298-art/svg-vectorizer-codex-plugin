@@ -188,6 +188,23 @@ class McpSmokeTests(unittest.TestCase):
         self.assertIn("repair_svg_trace", names)
         self.assertIn("run_svg_pipeline", names)
 
+    def test_tools_list_exposes_checkerboard_mask_mode(self):
+        server = self.start_server()
+
+        response = server.request(
+            {
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "tools/list",
+                "params": {},
+            }
+        )
+
+        tools = {tool["name"]: tool for tool in response["result"]["tools"]}
+        for tool_name in ("convert_image_to_svg", "run_svg_pipeline"):
+            enum = tools[tool_name]["inputSchema"]["properties"]["mask_mode"]["enum"]
+            self.assertIn("checkerboard", enum)
+
     def test_tools_call_dispatches_to_python_tool(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

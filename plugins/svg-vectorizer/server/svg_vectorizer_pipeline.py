@@ -52,6 +52,9 @@ SUPPORTED_FORMATS_LABEL = "PNG, JPEG, WebP"
 MAX_INPUT_PIXELS = 1_048_576
 MAX_INPUT_SIDE = 2048
 RENDER_TIMEOUT_SECONDS = 60
+CHECKERBOARD_COLOR_TOLERANCE = 18.0
+CHECKERBOARD_MIN_TILE = 3
+CHECKERBOARD_MAX_TILE = 32
 
 
 def _path(value: str | Path) -> Path:
@@ -166,6 +169,131 @@ def _estimate_background_rgb(rgb: np.ndarray) -> tuple[int, int, int]:
     return tuple(int(round(channel)) for channel in np.median(border, axis=0))
 
 
+
+def _checkerboard_border_pixels(rgb: np.ndarray) -> np.ndarray:
+    height, width = rgb.shape[:2]
+    if height == 1 or width == 1:
+        return rgb.reshape(-1, 3)
+    return np.concatenate((rgb[0, :, :], rgb[-1, :, :], rgb[:, 0, :], rgb[:, -1, :]), axis=0)
+
+
+def _classify_checkerboard_pixels(rgb: np.ndarray, colors: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+    rgb_float = rgb.astype(np.float32)
+    distances = np.stack(
+        [np.linalg.norm(rgb_float - color.astype(np.float32), axis=2) for color in colors],
+        axis=2,
+    )
+    labels = np.argmin(distances, axis=2).astype(np.uint8)
+    close = np.min(distances, axis=2) <= CHECKERBOARD_COLOR_TOLERANCE
+    return labels, close
+
+
+def _dominant_light_checkerboard_colors(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
+    border = _checkerboard_border_pixels(rgb)
+    quantized = (border // 8).astype(np.uint8)
+    keys, counts = np.unique(quantized.reshape(-1, 3), axis=0, return_counts=True)
+    if len(keys) < 2:
+        return None
+
+    candidates = []
+    for key in keys[np.argsort(counts)[::-1]][:8]:
+        bucket = border[np.all(quantized == key, axis=1)]
+        if bucket.size == 0:
+            continue
+        color = np.median(bucket, axis=0).astype(np.uint8)
+        if float(color.mean()) < 180 or int(color.min()) < 150:
+            continue
+        if all(np.linalg.norm(color.astype(np.float32) - existing.astype(np.float32)) > 6 for existing in candidates):
+            candidates.append(color)
+
+    best: tuple[float, tuple[np.ndarray, np.ndarray]] | None = None
+    border_rgb = border.reshape(-1, 1, 3)
+    for index, first in enumerate(candidates):
+        for second in candidates[index + 1 :]:
+            distance = float(np.linalg.norm(first.astype(np.float32) - second.astype(np.float32)))
+            if distance < 8 or distance > 120:
+                continue
+            pair = (first, second)
+            pair_distances = np.stack(
+                [np.linalg.norm(border_rgb.astype(np.float32) - color.astype(np.float32), axis=2) for color in pair],
+                axis=2,
+            )
+            coverage = float((np.min(pair_distances, axis=2) <= CHECKERBOARD_COLOR_TOLERANCE).mean())
+            if coverage < 0.75:
+                continue
+            if best is None or coverage > best[0]:
+                best = (coverage, pair)
+    return None if best is None else best[1]
+
+
+def _checkerboard_line_tile_size(labels: np.ndarray, close: np.ndarray) -> int | None:
+    if labels.size < CHECKERBOARD_MIN_TILE * 4 or float(close.mean()) < 0.85:
+        return None
+    sequence = labels[close]
+    if sequence.size < CHECKERBOARD_MIN_TILE * 4:
+        return None
+    if min(float((sequence == 0).mean()), float((sequence == 1).mean())) < 0.25:
+        return None
+
+    runs = []
+    previous = int(sequence[0])
+    length = 1
+    for value in sequence[1:]:
+        current = int(value)
+        if current == previous:
+            length += 1
+            continue
+        runs.append(length)
+        previous = current
+        length = 1
+    runs.append(length)
+    if len(runs) < 4:
+        return None
+
+    interior = np.array(runs[1:-1] if len(runs) > 2 else runs, dtype=np.float32)
+    median = float(np.median(interior))
+    if median < CHECKERBOARD_MIN_TILE or median > CHECKERBOARD_MAX_TILE:
+        return None
+    if float(interior.std() / median) > 0.35:
+        return None
+    return int(round(median))
+
+
+def _detect_baked_checkerboard(rgb: np.ndarray) -> dict[str, Any] | None:
+    colors = _dominant_light_checkerboard_colors(rgb)
+    if colors is None:
+        return None
+
+    labels, background = _classify_checkerboard_pixels(rgb, colors)
+    height, width = labels.shape
+    tile_sizes = []
+    lines = (
+        (labels[0, :], background[0, :]),
+        (labels[height - 1, :], background[height - 1, :]),
+        (labels[:, 0], background[:, 0]),
+        (labels[:, width - 1], background[:, width - 1]),
+    )
+    for line_labels, line_background in lines:
+        tile_size = _checkerboard_line_tile_size(line_labels, line_background)
+        if tile_size is not None:
+            tile_sizes.append(tile_size)
+    if len(tile_sizes) < 2:
+        return None
+
+    tile_size = int(round(float(np.median(tile_sizes))))
+    if max(tile_sizes) - min(tile_sizes) > max(2, round(tile_size * 0.35)):
+        return None
+    if float(background.mean()) < 0.35:
+        return None
+
+    return {
+        "background": background,
+        "tile_size": tile_size,
+        "colors": [_hex(tuple(int(channel) for channel in color)) for color in colors],
+        "background_pixels": int(background.sum()),
+    }
+
+
 def _flood_background(candidate: np.ndarray) -> np.ndarray:
     height, width = candidate.shape
     background = np.zeros((height, width), dtype=bool)
@@ -256,7 +384,16 @@ def prepare_transparent_png(input_path: str | Path, output_path: str | Path, mas
     effective_mode = "alpha" if mask_mode == "auto" and rgba_source[:, :, 3].min() < 255 else mask_mode
     if effective_mode == "auto":
         effective_mode = "flood"
-    foreground = _foreground_mask(rgb, rgba_source, effective_mode)
+
+    checkerboard = None
+    if effective_mode == "checkerboard":
+        checkerboard = _detect_baked_checkerboard(rgb)
+        if checkerboard is not None:
+            foreground = ~checkerboard["background"]
+        else:
+            foreground = _foreground_mask(rgb, rgba_source, "flood")
+    else:
+        foreground = _foreground_mask(rgb, rgba_source, effective_mode)
 
     rgba = np.zeros((rgb.shape[0], rgb.shape[1], 4), dtype=np.uint8)
     rgba[foreground, :3] = rgb[foreground]
@@ -267,6 +404,10 @@ def prepare_transparent_png(input_path: str | Path, output_path: str | Path, mas
         "prepared_png": str(output_path),
         "mask_mode": effective_mode,
         "foreground_pixels": int(foreground.sum()),
+        "checkerboard_detected": checkerboard is not None,
+        "checkerboard_tile_size": checkerboard["tile_size"] if checkerboard is not None else None,
+        "checkerboard_colors": checkerboard["colors"] if checkerboard is not None else [],
+        "checkerboard_background_pixels": checkerboard["background_pixels"] if checkerboard is not None else 0,
         **image_info,
     }
 

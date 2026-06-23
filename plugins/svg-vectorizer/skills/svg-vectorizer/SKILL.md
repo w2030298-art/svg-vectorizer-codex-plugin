@@ -25,6 +25,7 @@ Default to `run_svg_pipeline` with `mode: "vtracer"` and `mask_mode: "auto"`.
 - Use `mask_mode: "warm-icon"` for orange/black icons on gradient or shadowed backgrounds.
 - Use `mask_mode: "alpha"` when the source already has transparency.
 - Use `mask_mode: "flood"` for mostly flat solid backgrounds.
+- Use `mask_mode: "checkerboard"` for RGB/no-alpha inputs with baked light gray/white checkerboard transparency. This is opt-in; `auto` does not select it.
 - Use `mask_mode: "none"` only when the full image, including background, should be traced.
 
 ## Validation

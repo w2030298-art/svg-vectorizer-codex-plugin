@@ -6,6 +6,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
+from PIL import Image, ImageDraw
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "plugins" / "svg-vectorizer" / "server" / "pipeline_cli.py"
@@ -46,6 +48,38 @@ class ConsoleCliTests(unittest.TestCase):
             self.assertEqual(payload["mask_mode"], "alpha")
             self.assertTrue(Path(payload["svg"]).exists())
             self.assertTrue(Path(payload["svg"]).parent.samefile(output_dir))
+
+    def test_convert_subcommand_accepts_checkerboard_mask_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "checkerboard.png"
+            image = Image.new("RGB", (32, 32), (255, 255, 255))
+            draw = ImageDraw.Draw(image)
+            for y in range(0, 32, 8):
+                for x in range(0, 32, 8):
+                    color = (255, 255, 255) if ((x // 8) + (y // 8)) % 2 == 0 else (204, 204, 204)
+                    draw.rectangle((x, y, x + 7, y + 7), fill=color)
+            draw.rectangle((10, 10, 21, 21), fill=(30, 110, 220))
+            image.save(source)
+            output_dir = root / "convert"
+
+            result = self.run_cli(
+                "convert",
+                str(source),
+                str(output_dir),
+                "--mode",
+                "pixel",
+                "--mask-mode",
+                "checkerboard",
+                "--quality-profile",
+                "fidelity",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["mask_mode"], "checkerboard")
+            self.assertTrue(payload["checkerboard_detected"])
+            self.assertTrue(Path(payload["svg"]).exists())
 
     def test_convert_subcommand_reports_runtime_errors_without_traceback(self):
         with tempfile.TemporaryDirectory() as tmp:

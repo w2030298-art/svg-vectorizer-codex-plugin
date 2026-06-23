@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image, ImageDraw
 
@@ -16,6 +17,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 RENDER_HELPER = PLUGIN_ROOT / "server" / "render_svg_with_resvg.cjs"
 
 from svg_vectorizer_pipeline import (
+    _render_svg,
     convert_image_to_svg,
     repair_svg_trace,
     run_batch_pipeline,
@@ -82,6 +84,140 @@ def make_icon(path: Path) -> None:
 
 
 class PipelineTests(unittest.TestCase):
+    def test_conversion_accepts_png_jpeg_and_webp_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cases = [
+                ("icon.png", None, "PNG"),
+                ("icon.jpg", "JPEG", "JPEG"),
+                ("icon.webp", "WEBP", "WEBP"),
+            ]
+
+            for filename, image_format, expected_format in cases:
+                with self.subTest(filename=filename):
+                    source = root / filename
+                    image = Image.new("RGB", (32, 24), (240, 240, 240))
+                    draw = ImageDraw.Draw(image)
+                    draw.rectangle((6, 5, 25, 18), fill=(20, 100, 210))
+                    image.save(source, format=image_format)
+
+                    result = convert_image_to_svg(
+                        input_path=source,
+                        output_dir=root / f"out-{source.suffix[1:]}",
+                        mode="pixel",
+                        mask_mode="none",
+                        quality_profile="fidelity",
+                    )
+
+                    self.assertEqual(result["input_format"], expected_format)
+                    self.assertFalse(result["downsampled"])
+                    self.assertEqual(result["width"], 32)
+                    self.assertEqual(result["height"], 24)
+                    self.assertTrue(Path(result["svg"]).exists())
+                    self.assertGreater(result["path_count"], 0)
+
+    def test_unsupported_image_format_has_clear_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "animated.gif"
+            Image.new("RGB", (8, 8), (20, 30, 40)).save(source, format="GIF")
+
+            with self.assertRaisesRegex(ValueError, "Unsupported input format.*GIF.*Supported formats: PNG, JPEG, WebP"):
+                convert_image_to_svg(
+                    input_path=source,
+                    output_dir=root / "out",
+                    mode="pixel",
+                    mask_mode="none",
+                    quality_profile="fidelity",
+                )
+
+    def test_large_image_is_downsampled_before_vectorization(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "wide.png"
+            image = Image.new("RGB", (4096, 32), (255, 255, 255))
+            ImageDraw.Draw(image).rectangle((0, 8, 4095, 23), fill=(0, 120, 220))
+            image.save(source)
+
+            result = convert_image_to_svg(
+                input_path=source,
+                output_dir=root / "out",
+                mode="pixel",
+                mask_mode="none",
+                quality_profile="fidelity",
+            )
+
+            self.assertTrue(result["downsampled"])
+            self.assertEqual(result["source_width"], 4096)
+            self.assertEqual(result["source_height"], 32)
+            self.assertLess(result["width"], result["source_width"])
+            self.assertLessEqual(result["width"], result["max_input_side"])
+            self.assertTrue(Path(result["prepared_png"]).exists())
+            self.assertTrue(Path(result["svg"]).exists())
+
+    def test_empty_transparent_image_writes_empty_pixel_svg(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "empty.png"
+            Image.new("RGBA", (3, 3), (0, 0, 0, 0)).save(source)
+
+            result = convert_image_to_svg(
+                input_path=source,
+                output_dir=root / "out",
+                mode="pixel",
+                mask_mode="alpha",
+                quality_profile="fidelity",
+            )
+
+            self.assertEqual(result["foreground_pixels"], 0)
+            self.assertEqual(result["path_count"], 0)
+            self.assertTrue(Path(result["svg"]).exists())
+
+    def test_single_color_and_tiny_inputs_convert(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for size in [(1, 1), (2, 3)]:
+                with self.subTest(size=size):
+                    source = root / f"solid-{size[0]}x{size[1]}.png"
+                    Image.new("RGB", size, (10, 20, 30)).save(source)
+
+                    result = convert_image_to_svg(
+                        input_path=source,
+                        output_dir=root / f"out-{size[0]}x{size[1]}",
+                        mode="pixel",
+                        mask_mode="none",
+                        quality_profile="fidelity",
+                    )
+
+                    self.assertEqual(result["width"], size[0])
+                    self.assertEqual(result["height"], size[1])
+                    self.assertEqual(result["foreground_pixels"], size[0] * size[1])
+                    self.assertGreater(result["path_count"], 0)
+
+    def test_renderer_timeout_returns_readable_degraded_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            svg = root / "trace.svg"
+            svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', encoding="utf-8")
+
+            with EnvPatch(
+                {
+                    "SVG_VECTORIZER_RENDER_HELPER": "slow-renderer.cjs",
+                    "SVG_VECTORIZER_NODE_MODULES": str(root),
+                    "SVG_VECTORIZER_RENDER_SETUP_ERROR": None,
+                }
+            ):
+                with patch(
+                    "svg_vectorizer_pipeline.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired(["node", "slow-renderer.cjs"], 60),
+                ):
+                    rendered, renderer, warning = _render_svg(svg, root / "rendered.png", 1, 1)
+
+            self.assertIsNone(rendered)
+            self.assertEqual(renderer, "prepared-png-proxy")
+            self.assertIn("SVG renderer timed out after 60 seconds", warning)
+            self.assertIn("slow-renderer.cjs", warning)
+
     def test_vtracer_conversion_writes_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

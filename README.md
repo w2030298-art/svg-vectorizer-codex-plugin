@@ -105,7 +105,7 @@ default entry point for normal requests.
 
 | Parameter | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `input_path` | yes | - | Raster source path: PNG, JPG, or WebP supported by Pillow. |
+| `input_path` | yes | - | Raster source path: PNG, JPEG/JPG, or WebP. Unsupported actual file formats are rejected with a readable error. |
 | `output_dir` | yes | - | Directory for SVG, prepared PNG, validation artifacts, and `pipeline_manifest.json`. |
 | `mode` | no | `vtracer` | `vtracer`, `pixel`, or `both`. `both` writes separate vtracer and pixel candidates. |
 | `mask_mode` | no | `auto` | `auto`, `alpha`, `flood`, `warm-icon`, or `none`. |
@@ -151,7 +151,8 @@ Converts one raster image into one SVG candidate.
 | `name` | no | source stem | Optional output stem. |
 
 Output: JSON with `svg`, `prepared_png`, candidate `manifest`, effective
-`mask_mode`, image dimensions, foreground pixel count, path/fill counts, and SVG
+`mask_mode`, detected `input_format`, source and prepared dimensions,
+`downsampled` metadata, foreground pixel count, path/fill counts, and SVG
 byte size.
 
 ### `validate_svg_trace`
@@ -226,10 +227,23 @@ svg-vectorizer batch tests/fixtures tmp/readme-batch --mode pixel --mask-mode au
 ### Renderer unavailable
 
 Validation uses `@resvg/resvg-js` when the Node runtime is available. If renderer
-setup fails, validation returns `status: "degraded"` and
-`renderer: "prepared-png-proxy"` instead of failing the whole request. In
-degraded mode, use structural metrics plus the generated artifacts for review;
-exact SVG raster metrics are unavailable until the renderer is installed.
+setup fails, exits non-zero, or times out, validation returns
+`status: "degraded"` and `renderer: "prepared-png-proxy"` instead of failing
+the whole request. In degraded mode, use structural metrics plus the generated
+artifacts for review; exact SVG raster metrics are unavailable until the
+renderer is installed.
+
+### Input formats and size limits
+
+Conversion accepts PNG, JPEG/JPG, and WebP inputs based on the actual decoded
+file format. Valid files in other formats, such as GIF, and corrupt image files
+return a readable error that names the supported formats.
+
+Before masking or vectorization, inputs larger than `1,048,576` pixels or with a
+side longer than `2048` pixels are downsampled. Output manifests include
+`source_width`, `source_height`, prepared `width`, prepared `height`,
+`downsampled`, `downsample_scale`, `max_input_pixels`, and `max_input_side` so
+callers can tell when graceful degradation occurred.
 
 ### Runtime bootstrap
 
@@ -243,8 +257,9 @@ Before reusing an existing cached venv, the server checks that core modules
 incomplete venv is repaired with `pip install -r requirements.txt`; if repair or
 rebuild fails, the bad venv is removed so the next run does not blindly reuse it.
 If setup still fails, the error includes the cache venv path, selected Python,
-missing modules, and recovery steps. If the failure is Python selection, set
-`SVG_VECTORIZER_PYTHON` as described below.
+missing modules, and recovery steps. MCP Python tool calls are bounded to 120
+seconds and report a timeout with the tool name and runtime venv path. If the
+failure is Python selection, set `SVG_VECTORIZER_PYTHON` as described below.
 
 ### CLI failures
 

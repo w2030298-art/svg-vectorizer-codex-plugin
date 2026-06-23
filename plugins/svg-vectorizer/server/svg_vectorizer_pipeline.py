@@ -47,6 +47,11 @@ QUALITY_PROFILES = {
 }
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+SUPPORTED_IMAGE_FORMATS = {"PNG", "JPEG", "WEBP"}
+SUPPORTED_FORMATS_LABEL = "PNG, JPEG, WebP"
+MAX_INPUT_PIXELS = 1_048_576
+MAX_INPUT_SIDE = 2048
+RENDER_TIMEOUT_SECONDS = 60
 
 
 def _path(value: str | Path) -> Path:
@@ -64,6 +69,61 @@ def _has_glob_meta(value: str) -> bool:
 
 def _is_batch_image(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def _bounded_dimensions(width: int, height: int) -> tuple[int, int, float]:
+    scale = 1.0
+    longest_side = max(width, height)
+    if longest_side > MAX_INPUT_SIDE:
+        scale = min(scale, MAX_INPUT_SIDE / longest_side)
+    pixels = width * height
+    if pixels > MAX_INPUT_PIXELS:
+        scale = min(scale, math.sqrt(MAX_INPUT_PIXELS / pixels))
+    if scale >= 1.0:
+        return width, height, 1.0
+    return max(1, int(math.floor(width * scale))), max(1, int(math.floor(height * scale))), scale
+
+
+def _open_supported_image(path: Path) -> tuple[Image.Image, dict[str, Any]]:
+    if not path.exists():
+        raise ValueError(f"Input image does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"Input image is not a file: {path}")
+
+    try:
+        with Image.open(path) as image:
+            image_format = (image.format or "").upper()
+            if image_format not in SUPPORTED_IMAGE_FORMATS:
+                detected = image_format or path.suffix.lower() or "unknown"
+                raise ValueError(
+                    f"Unsupported input format {detected} for {path}. "
+                    f"Supported formats: {SUPPORTED_FORMATS_LABEL}."
+                )
+            source_width, source_height = image.size
+            if source_width < 1 or source_height < 1:
+                raise ValueError(f"Input image has invalid dimensions {source_width}x{source_height}: {path}")
+            width, height, scale = _bounded_dimensions(source_width, source_height)
+            loaded = image.convert("RGBA")
+            if (width, height) != (source_width, source_height):
+                loaded = loaded.resize((width, height), Image.Resampling.LANCZOS)
+            else:
+                loaded = loaded.copy()
+    except ValueError:
+        raise
+    except OSError as exc:
+        raise ValueError(f"Could not read input image {path} as {SUPPORTED_FORMATS_LABEL}: {exc}") from exc
+
+    return loaded, {
+        "input_format": image_format,
+        "source_width": int(source_width),
+        "source_height": int(source_height),
+        "width": int(width),
+        "height": int(height),
+        "downsampled": (width, height) != (source_width, source_height),
+        "downsample_scale": float(scale),
+        "max_input_pixels": MAX_INPUT_PIXELS,
+        "max_input_side": MAX_INPUT_SIDE,
+    }
 
 
 def _discover_batch_inputs(input_path: str | Path) -> list[Path]:
@@ -92,11 +152,13 @@ def _hex(rgb: tuple[int, int, int]) -> str:
 
 
 def _load_rgba(path: Path) -> np.ndarray:
-    return np.asarray(Image.open(path).convert("RGBA"), dtype=np.uint8)
+    with Image.open(path) as image:
+        return np.asarray(image.convert("RGBA"), dtype=np.uint8)
 
 
 def _load_rgb(path: Path) -> np.ndarray:
-    return np.asarray(Image.open(path).convert("RGB"), dtype=np.uint8)
+    with Image.open(path) as image:
+        return np.asarray(image.convert("RGB"), dtype=np.uint8)
 
 
 def _estimate_background_rgb(rgb: np.ndarray) -> tuple[int, int, int]:
@@ -188,7 +250,8 @@ def _warm_icon_mask(rgb: np.ndarray) -> np.ndarray:
 def prepare_transparent_png(input_path: str | Path, output_path: str | Path, mask_mode: str) -> dict[str, Any]:
     input_path = _path(input_path)
     output_path = _path(output_path)
-    rgba_source = _load_rgba(input_path)
+    source_image, image_info = _open_supported_image(input_path)
+    rgba_source = np.asarray(source_image, dtype=np.uint8)
     rgb = rgba_source[:, :, :3]
     effective_mode = "alpha" if mask_mode == "auto" and rgba_source[:, :, 3].min() < 255 else mask_mode
     if effective_mode == "auto":
@@ -203,9 +266,8 @@ def prepare_transparent_png(input_path: str | Path, output_path: str | Path, mas
     return {
         "prepared_png": str(output_path),
         "mask_mode": effective_mode,
-        "width": int(rgb.shape[1]),
-        "height": int(rgb.shape[0]),
         "foreground_pixels": int(foreground.sum()),
+        **image_info,
     }
 
 
@@ -379,7 +441,10 @@ def _render_svg(svg_path: Path, output_png: Path, width: int, height: int) -> tu
     env["NODE_PATH"] = node_modules
     command = ["node", helper, str(svg_path), str(output_png), str(width), str(height)]
     try:
-        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=60, check=False)
+        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False)
+    except subprocess.TimeoutExpired as exc:
+        command_text = " ".join(str(part) for part in (exc.cmd or command))
+        return None, "prepared-png-proxy", f"SVG renderer timed out after {RENDER_TIMEOUT_SECONDS} seconds: {command_text}"
     except Exception as exc:
         return None, "prepared-png-proxy", f"SVG renderer failed to start: {exc}"
     if result.returncode != 0:

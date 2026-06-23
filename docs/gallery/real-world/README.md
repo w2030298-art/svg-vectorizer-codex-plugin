@@ -1,0 +1,84 @@
+# Real-World SVG Pipeline Gallery
+
+This gallery records four small real-image cases run through `run_svg_pipeline`
+with `mode: "both"`. Each case includes the bounded source image, vtracer and
+pixel SVG candidates, rendered diff contact sheets, assessment JSON, and a
+Chrome-open screenshot review.
+
+Source metadata is in [`source_metadata.json`](source_metadata.json). A compact
+machine-readable summary is in [`gallery_manifest.json`](gallery_manifest.json).
+
+## Browser Review
+
+All generated SVGs were opened from `file://` URLs in Google Chrome for Testing
+150.0.7871.24 on 2026-06-23. The browser screenshots are in
+[`browser-review/`](browser-review/), and the combined review sheet is:
+
+![Chrome browser review contact sheet](browser-review/browser_review_contact_sheet.png)
+
+Manual visual conclusions are recorded in
+[`browser_review.json`](browser_review.json):
+
+- Wikipedia logo: pixel preserves the globe glyph/detail fidelity; vtracer is
+  recognizable but simplified.
+- OOjs edit icon: both open correctly; pixel preserves the thin
+  highlight/outline while vtracer simplifies to an editable silhouette.
+- Firefox warm-gradient tile: both open correctly after `warm-icon` masking;
+  pixel preserves gradients more closely, while vtracer keeps the main
+  silhouette and color bands.
+- Flower photo: pixel preserves the bounded raster source exactly; vtracer is a
+  stylized posterized approximation rather than photo-fidelity output.
+
+## Cases
+
+### Wikipedia Logo
+
+Mask mode: `alpha`; quality profile: `balanced`.
+
+| Source | vtracer SVG | vtracer diff | pixel SVG | pixel diff |
+| --- | --- | --- | --- | --- |
+| ![Wikipedia source](sources/wikipedia_logo.png) | ![Wikipedia vtracer](wikipedia-logo/vtracer/wikipedia_logo_vtracer.svg) | ![Wikipedia vtracer diff](wikipedia-logo/vtracer/validation/wikipedia_logo_vtracer_diff.png) | ![Wikipedia pixel](wikipedia-logo/pixel/wikipedia_logo_pixel.svg) | ![Wikipedia pixel diff](wikipedia-logo/pixel/validation/wikipedia_logo_pixel_diff.png) |
+
+| Candidate | Status | alpha_iou | rgba_ssim | mean_abs_rgba_delta | paths | assessment |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| vtracer | warn | 0.9512 | 0.6929 | 12.51 | 112 | [`assessment.json`](wikipedia-logo/vtracer/validation/wikipedia_logo_vtracer_assessment.json) |
+| pixel | pass | 1.0000 | 1.0000 | 0.00 | 1740 | [`assessment.json`](wikipedia-logo/pixel/validation/wikipedia_logo_pixel_assessment.json) |
+
+### OOjs Edit Icon
+
+Mask mode: `alpha`; quality profile: `balanced`.
+
+| Source | vtracer SVG | vtracer diff | pixel SVG | pixel diff |
+| --- | --- | --- | --- | --- |
+| ![OOjs icon source](sources/oojs_edit_icon.png) | ![OOjs icon vtracer](oojs-edit-icon/vtracer/oojs_edit_icon_vtracer.svg) | ![OOjs icon vtracer diff](oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_diff.png) | ![OOjs icon pixel](oojs-edit-icon/pixel/oojs_edit_icon_pixel.svg) | ![OOjs icon pixel diff](oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_diff.png) |
+
+| Candidate | Status | alpha_iou | rgba_ssim | mean_abs_rgba_delta | paths | assessment |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| vtracer | fail | 0.8947 | 0.9603 | 2.31 | 167 | [`assessment.json`](oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_assessment.json) |
+| pixel | pass | 1.0000 | 1.0000 | 0.00 | 1 | [`assessment.json`](oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_assessment.json) |
+
+### Firefox Warm Gradient
+
+Mask mode: `warm-icon`; quality profile: `fidelity`.
+
+| Source | vtracer SVG | vtracer diff | pixel SVG | pixel diff |
+| --- | --- | --- | --- | --- |
+| ![Firefox warm source](sources/firefox_warm_gradient.png) | ![Firefox warm vtracer](firefox-warm-gradient/vtracer/firefox_warm_gradient_vtracer.svg) | ![Firefox warm vtracer diff](firefox-warm-gradient/vtracer/validation/firefox_warm_gradient_vtracer_diff.png) | ![Firefox warm pixel](firefox-warm-gradient/pixel/firefox_warm_gradient_pixel.svg) | ![Firefox warm pixel diff](firefox-warm-gradient/pixel/validation/firefox_warm_gradient_pixel_diff.png) |
+
+| Candidate | Status | alpha_iou | rgba_ssim | mean_abs_rgba_delta | paths | assessment |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| vtracer | warn | 0.9512 | 0.8437 | 7.25 | 102 | [`assessment.json`](firefox-warm-gradient/vtracer/validation/firefox_warm_gradient_vtracer_assessment.json) |
+| pixel | pass | 1.0000 | 1.0000 | 0.00 | 2746 | [`assessment.json`](firefox-warm-gradient/pixel/validation/firefox_warm_gradient_pixel_assessment.json) |
+
+### Flower Photo
+
+Mask mode: `none`; quality profile: `compact`.
+
+| Source | vtracer SVG | vtracer diff | pixel SVG | pixel diff |
+| --- | --- | --- | --- | --- |
+| ![Flower photo source](sources/flower_photo.jpg) | ![Flower photo vtracer](flower-photo/vtracer/flower_photo_vtracer.svg) | ![Flower photo vtracer diff](flower-photo/vtracer/validation/flower_photo_vtracer_diff.png) | ![Flower photo pixel](flower-photo/pixel/flower_photo_pixel.svg) | ![Flower photo pixel diff](flower-photo/pixel/validation/flower_photo_pixel_diff.png) |
+
+| Candidate | Status | alpha_iou | rgba_ssim | mean_abs_rgba_delta | paths | assessment |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| vtracer | warn | 1.0000 | 0.7469 | 10.95 | 11 | [`assessment.json`](flower-photo/vtracer/validation/flower_photo_vtracer_assessment.json) |
+| pixel | pass | 1.0000 | 1.0000 | 0.00 | 4342 | [`assessment.json`](flower-photo/pixel/validation/flower_photo_pixel_assessment.json) |

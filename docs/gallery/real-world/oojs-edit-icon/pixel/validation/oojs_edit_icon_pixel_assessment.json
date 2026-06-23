@@ -1,0 +1,30 @@
+{
+  "status": "pass",
+  "renderer": "resvg-js",
+  "renderer_warning": null,
+  "recommended_action": "Candidate is suitable as a clean vector trace.",
+  "source_image": "docs/gallery/real-world/sources/oojs_edit_icon.png",
+  "svg": "docs/gallery/real-world/oojs-edit-icon/pixel/oojs_edit_icon_pixel.svg",
+  "prepared_png": "docs/gallery/real-world/oojs-edit-icon/pixel/oojs_edit_icon_prepared.png",
+  "rendered_png": "docs/gallery/real-world/oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_rendered.png",
+  "diff_png": "docs/gallery/real-world/oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_diff.png",
+  "metrics": {
+    "source_foreground_pixels": 3459,
+    "rendered_foreground_pixels": 3459,
+    "alpha_iou": 1.0,
+    "rgba_ssim": 1.0,
+    "mean_abs_rgba_delta": 0.0
+  },
+  "structure": {
+    "svg_width": "96",
+    "svg_height": "96",
+    "viewBox": "0 0 96 96",
+    "path_count": 1,
+    "fill_count": 1,
+    "fills": {
+      "#000000": 1
+    },
+    "svg_bytes": 4757
+  },
+  "primary_issues": []
+}

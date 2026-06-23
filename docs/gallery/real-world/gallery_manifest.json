@@ -1,0 +1,200 @@
+{
+  "examples": [
+    {
+      "id": "wikipedia-logo",
+      "category": "logo",
+      "source_image": "sources/wikipedia_logo.png",
+      "source": "Wikipedia logo raster from Wikimedia Commons Special:FilePath/Wikipedia-logo.png?width=160",
+      "mask_mode": "alpha",
+      "quality_profile": "balanced",
+      "mode": "both",
+      "candidates": [
+        {
+          "mode": "vtracer",
+          "svg": "docs/gallery/real-world/wikipedia-logo/vtracer/wikipedia_logo_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/wikipedia-logo/vtracer/wikipedia_logo_prepared.png",
+          "path_count": 112,
+          "fill_count": 56,
+          "svg_bytes": 33090,
+          "status": "warn",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 0.9512462940595147,
+            "rgba_ssim": 0.6928916829120071,
+            "mean_abs_rgba_delta": 12.508102416992188,
+            "source_foreground_pixels": 8750,
+            "rendered_foreground_pixels": 9020
+          },
+          "diff_png": "docs/gallery/real-world/wikipedia-logo/vtracer/validation/wikipedia_logo_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/wikipedia-logo/vtracer/validation/wikipedia_logo_vtracer_assessment.json"
+        },
+        {
+          "mode": "pixel",
+          "svg": "docs/gallery/real-world/wikipedia-logo/pixel/wikipedia_logo_pixel.svg",
+          "prepared_png": "docs/gallery/real-world/wikipedia-logo/pixel/wikipedia_logo_prepared.png",
+          "path_count": 1740,
+          "fill_count": 1740,
+          "svg_bytes": 170246,
+          "status": "pass",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 1.0,
+            "mean_abs_rgba_delta": 0.0,
+            "source_foreground_pixels": 8750,
+            "rendered_foreground_pixels": 8750
+          },
+          "diff_png": "docs/gallery/real-world/wikipedia-logo/pixel/validation/wikipedia_logo_pixel_diff.png",
+          "assessment_json": "docs/gallery/real-world/wikipedia-logo/pixel/validation/wikipedia_logo_pixel_assessment.json"
+        }
+      ]
+    },
+    {
+      "id": "oojs-edit-icon",
+      "category": "icon",
+      "source_image": "sources/oojs_edit_icon.png",
+      "source": "OOjs UI edit icon raster preview from Wikimedia Commons Special:FilePath/OOjs_UI_icon_edit-ltr.svg?width=128",
+      "mask_mode": "alpha",
+      "quality_profile": "balanced",
+      "mode": "both",
+      "candidates": [
+        {
+          "mode": "vtracer",
+          "svg": "docs/gallery/real-world/oojs-edit-icon/vtracer/oojs_edit_icon_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/oojs-edit-icon/vtracer/oojs_edit_icon_prepared.png",
+          "path_count": 167,
+          "fill_count": 1,
+          "svg_bytes": 11494,
+          "status": "fail",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 0.8946673706441394,
+            "rgba_ssim": 0.9603173407623572,
+            "mean_abs_rgba_delta": 2.3102213541666665,
+            "source_foreground_pixels": 3459,
+            "rendered_foreground_pixels": 3718
+          },
+          "diff_png": "docs/gallery/real-world/oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_assessment.json"
+        },
+        {
+          "mode": "pixel",
+          "svg": "docs/gallery/real-world/oojs-edit-icon/pixel/oojs_edit_icon_pixel.svg",
+          "prepared_png": "docs/gallery/real-world/oojs-edit-icon/pixel/oojs_edit_icon_prepared.png",
+          "path_count": 1,
+          "fill_count": 1,
+          "svg_bytes": 4757,
+          "status": "pass",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 1.0,
+            "mean_abs_rgba_delta": 0.0,
+            "source_foreground_pixels": 3459,
+            "rendered_foreground_pixels": 3459
+          },
+          "diff_png": "docs/gallery/real-world/oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_diff.png",
+          "assessment_json": "docs/gallery/real-world/oojs-edit-icon/pixel/validation/oojs_edit_icon_pixel_assessment.json"
+        }
+      ]
+    },
+    {
+      "id": "firefox-warm-gradient",
+      "category": "warm-icon gradient background",
+      "source_image": "sources/firefox_warm_gradient.png",
+      "source": "Firefox 2019 logo raster preview from Wikimedia Commons Special:FilePath/Firefox_logo,_2019.svg?width=128, composited onto a warm gradient tile for mask testing",
+      "mask_mode": "warm-icon",
+      "quality_profile": "fidelity",
+      "mode": "both",
+      "candidates": [
+        {
+          "mode": "vtracer",
+          "svg": "docs/gallery/real-world/firefox-warm-gradient/vtracer/firefox_warm_gradient_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/firefox-warm-gradient/vtracer/firefox_warm_gradient_prepared.png",
+          "path_count": 102,
+          "fill_count": 102,
+          "svg_bytes": 32310,
+          "status": "warn",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 0.9511520737327189,
+            "rgba_ssim": 0.8437183281150052,
+            "mean_abs_rgba_delta": 7.24772799744898,
+            "source_foreground_pixels": 6194,
+            "rendered_foreground_pixels": 6508
+          },
+          "diff_png": "docs/gallery/real-world/firefox-warm-gradient/vtracer/validation/firefox_warm_gradient_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/firefox-warm-gradient/vtracer/validation/firefox_warm_gradient_vtracer_assessment.json"
+        },
+        {
+          "mode": "pixel",
+          "svg": "docs/gallery/real-world/firefox-warm-gradient/pixel/firefox_warm_gradient_pixel.svg",
+          "prepared_png": "docs/gallery/real-world/firefox-warm-gradient/pixel/firefox_warm_gradient_prepared.png",
+          "path_count": 2746,
+          "fill_count": 2746,
+          "svg_bytes": 160065,
+          "status": "pass",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 1.0,
+            "mean_abs_rgba_delta": 0.0,
+            "source_foreground_pixels": 6194,
+            "rendered_foreground_pixels": 6194
+          },
+          "diff_png": "docs/gallery/real-world/firefox-warm-gradient/pixel/validation/firefox_warm_gradient_pixel_diff.png",
+          "assessment_json": "docs/gallery/real-world/firefox-warm-gradient/pixel/validation/firefox_warm_gradient_pixel_assessment.json"
+        }
+      ]
+    },
+    {
+      "id": "flower-photo",
+      "category": "photo",
+      "source_image": "sources/flower_photo.jpg",
+      "source": "JPEG example flower photo from Wikimedia Commons Special:FilePath/JPEG_example_flower.jpg?width=160",
+      "mask_mode": "none",
+      "quality_profile": "compact",
+      "mode": "both",
+      "candidates": [
+        {
+          "mode": "vtracer",
+          "svg": "docs/gallery/real-world/flower-photo/vtracer/flower_photo_vtracer.svg",
+          "prepared_png": "docs/gallery/real-world/flower-photo/vtracer/flower_photo_prepared.png",
+          "path_count": 11,
+          "fill_count": 11,
+          "svg_bytes": 5480,
+          "status": "warn",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 0.7469406804949248,
+            "mean_abs_rgba_delta": 10.95337818287037,
+            "source_foreground_pixels": 6912,
+            "rendered_foreground_pixels": 6912
+          },
+          "diff_png": "docs/gallery/real-world/flower-photo/vtracer/validation/flower_photo_vtracer_diff.png",
+          "assessment_json": "docs/gallery/real-world/flower-photo/vtracer/validation/flower_photo_vtracer_assessment.json"
+        },
+        {
+          "mode": "pixel",
+          "svg": "docs/gallery/real-world/flower-photo/pixel/flower_photo_pixel.svg",
+          "prepared_png": "docs/gallery/real-world/flower-photo/pixel/flower_photo_prepared.png",
+          "path_count": 4342,
+          "fill_count": 4342,
+          "svg_bytes": 213732,
+          "status": "pass",
+          "renderer": "resvg-js",
+          "metrics": {
+            "alpha_iou": 1.0,
+            "rgba_ssim": 1.0,
+            "mean_abs_rgba_delta": 0.0,
+            "source_foreground_pixels": 6912,
+            "rendered_foreground_pixels": 6912
+          },
+          "diff_png": "docs/gallery/real-world/flower-photo/pixel/validation/flower_photo_pixel_diff.png",
+          "assessment_json": "docs/gallery/real-world/flower-photo/pixel/validation/flower_photo_pixel_assessment.json"
+        }
+      ]
+    }
+  ]
+}

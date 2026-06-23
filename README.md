@@ -189,8 +189,12 @@ checkout. The MCP server creates Python and Node runtime caches under
 `~/.cache/svg-vectorizer-codex-plugin` and writes artifacts to the `output_dir`
 passed to the tool.
 
-If setup fails, remove the cache directory and start a new Codex thread so the
-server can bootstrap again. If the failure is Python selection, set
+Before reusing an existing cached venv, the server checks that core modules
+(`cv2`, `numpy`, `PIL`, `skimage`, and `vtracer`) import successfully. An
+incomplete venv is repaired with `pip install -r requirements.txt`; if repair or
+rebuild fails, the bad venv is removed so the next run does not blindly reuse it.
+If setup still fails, the error includes the cache venv path, selected Python,
+missing modules, and recovery steps. If the failure is Python selection, set
 `SVG_VECTORIZER_PYTHON` as described below.
 
 ### Python versions
@@ -206,9 +210,12 @@ interpreter:
 $env:SVG_VECTORIZER_PYTHON = "C:\path\to\python-3.12.13\python.exe"
 ```
 
-For Codex bundled Python, set `SVG_VECTORIZER_PYTHON` to the bundled Python
-3.12.13 `python.exe`, then start a new Codex thread so the MCP server inherits
-the environment.
+After an explicit Python 3.12 candidate, the bootstrapper checks the Codex
+bundled runtime at
+`~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe`
+before falling back to lower supported system versions and broad `python`
+candidates. You can still set `SVG_VECTORIZER_PYTHON` explicitly, then start a
+new Codex thread so the MCP server inherits the environment.
 
 ### Optional renderer dependencies
 

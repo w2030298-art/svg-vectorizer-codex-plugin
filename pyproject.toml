@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "svg-vectorizer-codex-plugin"
+version = "0.1.0"
+description = "Standalone CLI and Codex plugin server for converting raster images to SVG."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+  "numpy>=2.2,<3",
+  "opencv-python-headless>=4.11,<5",
+  "Pillow>=11,<13",
+  "scikit-image>=0.25,<0.26",
+  "vtracer>=0.6.15,<0.7",
+]
+
+[project.scripts]
+svg-vectorizer = "pipeline_cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "plugins/svg-vectorizer/server"}
+py-modules = ["pipeline_cli", "svg_vectorizer_pipeline"]

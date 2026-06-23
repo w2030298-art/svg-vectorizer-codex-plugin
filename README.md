@@ -52,6 +52,16 @@ pipeline and MCP server already live in `plugins/svg-vectorizer/server`; the
 Claude Code adapter should stay thin and reuse the same core rather than forking
 tool behavior.
 
+### Standalone CLI
+
+From a repository checkout, install the Python package in editable mode:
+
+```sh
+python -m pip install -e .
+```
+
+This exposes the `svg-vectorizer` command without going through MCP.
+
 ## Agent Routing
 
 The bundled `svg-vectorizer` skill tells agents to route image-to-SVG requests
@@ -69,8 +79,19 @@ when the full image including the background should be traced.
 
 ## Tool Reference
 
-Tools are exposed through MCP in Codex. For local development or reproducible
-examples, the same tools can be called with:
+Tools are exposed through MCP in Codex and through the standalone
+`svg-vectorizer` CLI for local development or scripts. The four CLI subcommands
+map one-to-one to the core Python tools:
+
+```sh
+svg-vectorizer convert INPUT_IMAGE OUTPUT_DIR [--mode vtracer|pixel]
+svg-vectorizer validate SOURCE_IMAGE SVG_PATH OUTPUT_DIR
+svg-vectorizer repair MANIFEST_PATH OUTPUT_DIR [--budget 1..6]
+svg-vectorizer pipeline INPUT_IMAGE OUTPUT_DIR [--mode vtracer|pixel|both] [--repair]
+```
+
+The legacy JSON shim used by the MCP server remains available for reproducible
+tool payloads:
 
 ```sh
 python3 plugins/svg-vectorizer/server/pipeline_cli.py --tool TOOL_NAME --input-json '{"key":"value"}'
@@ -151,25 +172,25 @@ checkout.
 Convert and validate with the default vtracer route:
 
 ```sh
-python3 plugins/svg-vectorizer/server/pipeline_cli.py --tool run_svg_pipeline --input-json '{"input_path":"tests/fixtures/warm_icon.png","output_dir":"tmp/readme-vtracer","mode":"vtracer","mask_mode":"warm-icon","quality_profile":"balanced"}'
+svg-vectorizer pipeline tests/fixtures/warm_icon.png tmp/readme-vtracer --mode vtracer --mask-mode warm-icon --quality-profile balanced
 ```
 
 Create vtracer and pixel candidates for comparison:
 
 ```sh
-python3 plugins/svg-vectorizer/server/pipeline_cli.py --tool run_svg_pipeline --input-json '{"input_path":"tests/fixtures/transparent_icon.png","output_dir":"tmp/readme-both","mode":"both","mask_mode":"alpha","quality_profile":"balanced"}'
+svg-vectorizer pipeline tests/fixtures/transparent_icon.png tmp/readme-both --mode both --mask-mode alpha --quality-profile balanced
 ```
 
 Validate an existing SVG candidate:
 
 ```sh
-python3 plugins/svg-vectorizer/server/pipeline_cli.py --tool validate_svg_trace --input-json '{"source_image_path":"tests/fixtures/warm_icon.png","svg_path":"tmp/readme-vtracer/warm_icon_vtracer.svg","prepared_png_path":"tmp/readme-vtracer/warm_icon_prepared.png","output_dir":"tmp/readme-vtracer/validation-again"}'
+svg-vectorizer validate tests/fixtures/warm_icon.png tmp/readme-vtracer/warm_icon_vtracer.svg tmp/readme-vtracer/validation-again --prepared-png-path tmp/readme-vtracer/warm_icon_prepared.png
 ```
 
 Run bounded repair against a previous pipeline manifest:
 
 ```sh
-python3 plugins/svg-vectorizer/server/pipeline_cli.py --tool repair_svg_trace --input-json '{"manifest_path":"tmp/readme-vtracer/pipeline_manifest.json","output_dir":"tmp/readme-repair","budget":2}'
+svg-vectorizer repair tmp/readme-vtracer/pipeline_manifest.json tmp/readme-repair --budget 2
 ```
 
 ## Degraded Mode And Troubleshooting
@@ -196,6 +217,14 @@ rebuild fails, the bad venv is removed so the next run does not blindly reuse it
 If setup still fails, the error includes the cache venv path, selected Python,
 missing modules, and recovery steps. If the failure is Python selection, set
 `SVG_VECTORIZER_PYTHON` as described below.
+
+### CLI failures
+
+CLI argument errors exit with code `2` and print argparse usage. Runtime tool
+errors, such as a missing input image or invalid manifest, exit with code `1`
+and print `error: ...` to stderr without a Python traceback. The legacy
+`pipeline_cli.py --tool ... --input-json ...` route prints JSON to stderr on
+runtime failures so MCP callers can surface structured diagnostics.
 
 ### Python versions
 
@@ -239,6 +268,8 @@ Windows PowerShell:
 py -3.10 -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
 .\.venv\Scripts\python -m pip install -r plugins\svg-vectorizer\server\requirements.txt
+.\.venv\Scripts\python -m pip install -e .
+.\.venv\Scripts\python -m unittest tests.test_cli -v
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
 .\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
 ```
@@ -250,6 +281,8 @@ python3.10 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r plugins/svg-vectorizer/server/requirements.txt
+python -m pip install -e .
+python -m unittest tests.test_cli -v
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
 ```

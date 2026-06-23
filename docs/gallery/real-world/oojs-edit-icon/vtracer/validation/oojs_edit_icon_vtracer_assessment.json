@@ -1,0 +1,32 @@
+{
+  "status": "fail",
+  "renderer": "resvg-js",
+  "renderer_warning": null,
+  "recommended_action": "Run repair_svg_trace or use pixel mode for high fidelity.",
+  "source_image": "docs/gallery/real-world/sources/oojs_edit_icon.png",
+  "svg": "docs/gallery/real-world/oojs-edit-icon/vtracer/oojs_edit_icon_vtracer.svg",
+  "prepared_png": "docs/gallery/real-world/oojs-edit-icon/vtracer/oojs_edit_icon_prepared.png",
+  "rendered_png": "docs/gallery/real-world/oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_rendered.png",
+  "diff_png": "docs/gallery/real-world/oojs-edit-icon/vtracer/validation/oojs_edit_icon_vtracer_diff.png",
+  "metrics": {
+    "source_foreground_pixels": 3459,
+    "rendered_foreground_pixels": 3718,
+    "alpha_iou": 0.8946673706441394,
+    "rgba_ssim": 0.9603173407623572,
+    "mean_abs_rgba_delta": 2.3102213541666665
+  },
+  "structure": {
+    "svg_width": "96",
+    "svg_height": "96",
+    "viewBox": null,
+    "path_count": 167,
+    "fill_count": 1,
+    "fills": {
+      "#000000": 167
+    },
+    "svg_bytes": 11494
+  },
+  "primary_issues": [
+    "Low raster similarity between prepared source and SVG render."
+  ]
+}

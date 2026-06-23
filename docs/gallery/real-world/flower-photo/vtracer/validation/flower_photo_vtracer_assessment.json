@@ -1,0 +1,40 @@
+{
+  "status": "warn",
+  "renderer": "resvg-js",
+  "renderer_warning": null,
+  "recommended_action": "Candidate is usable but should be reviewed or repaired.",
+  "source_image": "docs/gallery/real-world/sources/flower_photo.jpg",
+  "svg": "docs/gallery/real-world/flower-photo/vtracer/flower_photo_vtracer.svg",
+  "prepared_png": "docs/gallery/real-world/flower-photo/vtracer/flower_photo_prepared.png",
+  "rendered_png": "docs/gallery/real-world/flower-photo/vtracer/validation/flower_photo_vtracer_rendered.png",
+  "diff_png": "docs/gallery/real-world/flower-photo/vtracer/validation/flower_photo_vtracer_diff.png",
+  "metrics": {
+    "source_foreground_pixels": 6912,
+    "rendered_foreground_pixels": 6912,
+    "alpha_iou": 1.0,
+    "rgba_ssim": 0.7469406804949248,
+    "mean_abs_rgba_delta": 10.95337818287037
+  },
+  "structure": {
+    "svg_width": "96",
+    "svg_height": "72",
+    "viewBox": null,
+    "path_count": 11,
+    "fill_count": 11,
+    "fills": {
+      "#C67C68": 1,
+      "#A6312E": 1,
+      "#B13F30": 1,
+      "#FDFAFA": 1,
+      "#FCFAF9": 1,
+      "#FBF5F3": 1,
+      "#952211": 1,
+      "#AB352D": 1,
+      "#C55647": 1,
+      "#FDFAF9": 1,
+      "#E2827F": 1
+    },
+    "svg_bytes": 5480
+  },
+  "primary_issues": []
+}

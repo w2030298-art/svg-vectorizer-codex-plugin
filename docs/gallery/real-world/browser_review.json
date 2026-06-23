@@ -1,0 +1,22 @@
+{
+  "review_date": "2026-06-23",
+  "browser": "Google Chrome for Testing 150.0.7871.24",
+  "method": "Opened each generated SVG with headless Chrome using file:// URLs and saved screenshots.",
+  "contact_sheet": "browser-review/browser_review_contact_sheet.png",
+  "screenshots": [
+    "browser-review/wikipedia_logo_vtracer_chrome.png",
+    "browser-review/wikipedia_logo_pixel_chrome.png",
+    "browser-review/oojs_edit_icon_vtracer_chrome.png",
+    "browser-review/oojs_edit_icon_pixel_chrome.png",
+    "browser-review/firefox_warm_gradient_vtracer_chrome.png",
+    "browser-review/firefox_warm_gradient_pixel_chrome.png",
+    "browser-review/flower_photo_vtracer_chrome.png",
+    "browser-review/flower_photo_pixel_chrome.png"
+  ],
+  "conclusions": {
+    "wikipedia-logo": "Pixel candidate preserves glyph/detail fidelity. Vtracer is recognizable but loses fine globe marks and should be treated as a compact approximation.",
+    "oojs-edit-icon": "Both candidates open correctly. Pixel preserves the thin highlight/outline; vtracer simplifies to a solid editable pencil silhouette.",
+    "firefox-warm-gradient": "Both candidates open correctly after warm-icon masking. Pixel preserves logo gradients more closely; vtracer keeps the main silhouette and color bands with some contour simplification.",
+    "flower-photo": "Pixel candidate preserves the raster photo exactly at the bounded source size. Vtracer is a stylized low-detail posterization and is not photo-fidelity output."
+  }
+}

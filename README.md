@@ -9,11 +9,10 @@ without starting browser or HTTP preview services.
 
 ## Gallery
 
-Representative warm-icon fixture converted with the default vtracer route:
-
-| Source PNG | Generated SVG |
-| --- | --- |
-| ![Warm icon fixture](tests/fixtures/warm_icon.png) | ![Warm icon vtracer SVG](docs/gallery/warm_icon_vtracer.svg) |
+See the [real-world gallery](docs/gallery/real-world/README.md) for source
+images, vtracer and pixel SVG candidates, diff contact sheets, assessment JSON,
+and browser-open review screenshots across logo, icon, warm-icon, and photo
+inputs.
 
 ## Sources of truth
 

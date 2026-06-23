@@ -45,7 +45,7 @@ class ConsoleCliTests(unittest.TestCase):
             self.assertEqual(payload["mode"], "pixel")
             self.assertEqual(payload["mask_mode"], "alpha")
             self.assertTrue(Path(payload["svg"]).exists())
-            self.assertEqual(output_dir, Path(payload["svg"]).parent)
+            self.assertTrue(Path(payload["svg"]).parent.samefile(output_dir))
 
     def test_convert_subcommand_reports_runtime_errors_without_traceback(self):
         with tempfile.TemporaryDirectory() as tmp:

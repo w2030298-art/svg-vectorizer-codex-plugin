@@ -451,7 +451,7 @@ async function handle(request) {
       result: {
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "svg-vectorizer", version: "0.1.0" }
+        serverInfo: { name: "svg-vectorizer", version: "0.2.0" }
       }
     };
   }

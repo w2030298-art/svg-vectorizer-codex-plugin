@@ -70,3 +70,6 @@ jobs:
 
       - name: Run plugin manifest tests
         run: python -m unittest tests.test_plugin_manifests -v
+
+      - name: Run Claude Code end-to-end tests
+        run: python -m unittest tests.test_claude_code_e2e -v

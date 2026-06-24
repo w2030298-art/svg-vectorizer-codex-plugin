@@ -72,6 +72,9 @@ under `~/.cache/svg-vectorizer-codex-plugin` as Codex: a Python venv with
 vtracer, OpenCV, scikit-image, Pillow, and NumPy, plus a Node runtime folder
 with `@resvg/resvg-js` for browserless SVG rendering.
 
+The Claude Code launch path is verified end to end (same input → consistent
+SVG) in [docs/verification/claude-code-e2e.md](docs/verification/claude-code-e2e.md).
+
 ### Standalone CLI
 
 From a repository checkout, install the Python package in editable mode:
@@ -360,6 +363,7 @@ py -3.10 -m venv .venv
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
 .\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
 .\.venv\Scripts\python -m unittest tests.test_plugin_manifests -v
+.\.venv\Scripts\python -m unittest tests.test_claude_code_e2e -v
 ```
 
 POSIX shells:
@@ -374,6 +378,7 @@ python -m unittest tests.test_cli -v
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
 python -m unittest tests.test_plugin_manifests -v
+python -m unittest tests.test_claude_code_e2e -v
 ```
 
 Optional: validate the plugin manifest with the `validate_plugin.py` helper from

@@ -48,6 +48,9 @@ The first tool call creates runtime caches under
 - a Python venv with vtracer, OpenCV, scikit-image, Pillow, and NumPy
 - a Node runtime folder with `@resvg/resvg-js` for browserless SVG rendering
 
+The Codex launch path is verified end to end (same input -> consistent SVG) in
+[docs/verification/codex-e2e.md](docs/verification/codex-e2e.md).
+
 ### Claude Code
 
 The Claude Code shell reuses the same `server/` core as Codex through a thin
@@ -363,6 +366,7 @@ py -3.10 -m venv .venv
 .\.venv\Scripts\python -m unittest tests.test_pipeline -v
 .\.venv\Scripts\python -m unittest tests.test_mcp_smoke -v
 .\.venv\Scripts\python -m unittest tests.test_plugin_manifests -v
+.\.venv\Scripts\python -m unittest tests.test_codex_e2e -v
 .\.venv\Scripts\python -m unittest tests.test_claude_code_e2e -v
 ```
 
@@ -378,6 +382,7 @@ python -m unittest tests.test_cli -v
 python -m unittest tests.test_pipeline -v
 python -m unittest tests.test_mcp_smoke -v
 python -m unittest tests.test_plugin_manifests -v
+python -m unittest tests.test_codex_e2e -v
 python -m unittest tests.test_claude_code_e2e -v
 ```
 

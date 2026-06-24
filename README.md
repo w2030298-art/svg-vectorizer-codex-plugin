@@ -24,7 +24,7 @@ This README is the current-state snapshot and entry point, not a changelog.
 - **Overview · how to run · architecture** -> this README.
 - **Contributor architecture** -> [docs/architecture.md](docs/architecture.md).
 - **Contributing workflow** -> [CONTRIBUTING.md](CONTRIBUTING.md).
-- **Version / what shipped** -> [GitHub Releases](../../releases). The marketplace plugin is currently `v0.1.0`; the first GitHub Release is cut at `v0.2.0`.
+- **Version / what shipped** -> [GitHub Releases](../../releases). The marketplace plugin is currently `v0.2.0`; the first GitHub Release is cut at `v0.2.0`.
 - **Status · decisions · progress** -> [Linear project](https://linear.app/wentaoxu-personal-workplace/project/svg-vectorizer图像转-svg-插件加固功能扩展与双平台适配-668f68c543f2/overview).
 
 Each fact has one home; this file links to the others and does not restate

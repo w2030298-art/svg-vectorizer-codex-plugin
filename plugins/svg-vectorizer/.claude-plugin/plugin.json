@@ -1,6 +1,6 @@
 {
   "name": "svg-vectorizer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Convert raster images into clean or high-fidelity SVGs with validation and optional repair.",
   "author": {
     "name": "SVG Vectorizer Contributors",

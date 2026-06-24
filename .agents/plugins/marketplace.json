@@ -1,7 +1,7 @@
 {
   "name": "svg-tools",
   "interface": {
-    "displayName": "Svg Tools"
+    "displayName": "SVG Tools"
   },
   "plugins": [
     {

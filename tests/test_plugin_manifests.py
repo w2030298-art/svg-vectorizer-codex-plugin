@@ -15,7 +15,11 @@ CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 PYPROJECT = ROOT / "pyproject.toml"
 SKILL = PLUGIN / "skills" / "svg-vectorizer" / "SKILL.md"
 SERVER_SCRIPT = PLUGIN / "server" / "mcp-server.cjs"
-EXPECTED_VERSION = "0.2.0"
+
+
+def project_version() -> str:
+    pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    return pyproject["project"]["version"]
 
 
 class ClaudePluginManifestTests(unittest.TestCase):
@@ -23,7 +27,7 @@ class ClaudePluginManifestTests(unittest.TestCase):
         manifest = json.loads(CLAUDE_MANIFEST.read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["name"], "svg-vectorizer")
-        self.assertEqual(manifest["version"], EXPECTED_VERSION)
+        self.assertEqual(manifest["version"], project_version())
         self.assertEqual(manifest["license"], "MIT")
         self.assertIn("author", manifest)
         self.assertIn("homepage", manifest)
@@ -57,19 +61,18 @@ class ClaudePluginManifestTests(unittest.TestCase):
 
 
 class ReleaseVersionTests(unittest.TestCase):
-    def test_package_and_platform_manifests_are_bumped_for_release(self):
-        pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    def test_platform_manifests_match_project_version(self):
+        version = project_version()
         codex_manifest = json.loads(CODEX_MANIFEST.read_text(encoding="utf-8"))
         claude_manifest = json.loads(CLAUDE_MANIFEST.read_text(encoding="utf-8"))
         marketplace = json.loads(CLAUDE_MARKETPLACE.read_text(encoding="utf-8"))
         entries = {entry["name"]: entry for entry in marketplace["plugins"]}
 
-        self.assertEqual(pyproject["project"]["version"], EXPECTED_VERSION)
-        self.assertEqual(codex_manifest["version"], EXPECTED_VERSION)
-        self.assertEqual(claude_manifest["version"], EXPECTED_VERSION)
-        self.assertEqual(entries["svg-vectorizer"]["version"], EXPECTED_VERSION)
+        self.assertEqual(codex_manifest["version"], version)
+        self.assertEqual(claude_manifest["version"], version)
+        self.assertEqual(entries["svg-vectorizer"]["version"], version)
 
-    def test_mcp_initialize_reports_release_version(self):
+    def test_mcp_initialize_reports_project_version(self):
         payload = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
         result = subprocess.run(
             ["node", str(SERVER_SCRIPT)],
@@ -82,7 +85,7 @@ class ReleaseVersionTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         response = json.loads(result.stdout.splitlines()[0])
-        self.assertEqual(response["result"]["serverInfo"]["version"], EXPECTED_VERSION)
+        self.assertEqual(response["result"]["serverInfo"]["version"], project_version())
 
 
 class SingleCoreInvariantTests(unittest.TestCase):
@@ -134,6 +137,7 @@ class SingleCoreInvariantTests(unittest.TestCase):
         marketplace = json.loads(CODEX_MARKETPLACE.read_text(encoding="utf-8"))
         codex_manifest = json.loads(CODEX_MANIFEST.read_text(encoding="utf-8"))
 
+        self.assertEqual(marketplace["interface"]["displayName"], "SVG Tools")
         entries = {entry["name"]: entry for entry in marketplace["plugins"]}
         entry = entries["svg-vectorizer"]
         self.assertEqual(entry["source"], {"source": "local", "path": "./plugins/svg-vectorizer"})
@@ -153,7 +157,7 @@ class ClaudeMarketplaceTests(unittest.TestCase):
         entry = entries["svg-vectorizer"]
         self.assertEqual(entry["source"], "./plugins/svg-vectorizer")
         self.assertEqual(entry["category"], "productivity")
-        self.assertEqual(entry["version"], EXPECTED_VERSION)
+        self.assertEqual(entry["version"], project_version())
 
         # The marketplace source must resolve to the same plugin directory that
         # owns the .claude-plugin shell, so installation reuses the single core.
